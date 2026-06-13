@@ -1,42 +1,64 @@
-<h1>EX-T3-WiFi <small>(T3 = Tactile Touch Throttle)</small></h1>
+# EX-T3-WiFi
 
-## WiFi throttle for DCC-EX Command Stations
+A powerful, touch-enabled WiFi throttle for DCC-EX Command Stations, built natively on **LVGL** for the ESP32 Cheap Yellow Display (CYD).
 
-#### The CS will need to be WiFi compatible and version 4.1.3+
+## Overview
+EX-T3-WiFi transforms an ESP32-2432S028R into a robust, handheld model railway controller. It communicates asynchronously via WiFi directly to a DCC-EX Command Station. The firmware has been meticulously architected using **FreeRTOS** and **LVGL 9** to provide a fluid, flicker-free, and thread-safe user experience.
 
-#
-### ⚠ Please note before deciding to buy parts this has been a solo project and may have unknown bugs and require some tinkering, please report any issues on GitHub ⚠
+## Hardware Requirements
+- **ESP32-2432S028R** (Also known as the CYD / Cheap Yellow Display)
+- **Screen**: 2.8" TFT (240x320) with ILI9341 Driver
+- **Touch**: Resistive or Capacitive touch panel support
+- **Power**: Internal battery circuitry (parsed natively for on-screen display)
 
-### 🛈 To upload the code you'll need a Chromium based web browser (Chrome, Opera, Edge) or Visual Studio Code and PlatformIO 🛈
+## Software Stack
+- **PlatformIO**: Primary build environment and C++ Framework
+- **LVGL (v9.1)**: Modern embedded graphics library handling the UI, layouts, widgets, and multi-tab swiping physics.
+- **FreeRTOS**: Handles async WiFi keep-alives, background voltage checks, and strictly manages LVGL thread safety via Mutex locks.
+- **AsyncTCP**: Low-latency network stack for high-performance bidirectional DCC-EX communication.
 
-#
+---
 
-## Parts
- - DFRobot FireBeetle 2 - DFR0654-F - https://www.dfrobot.com/product-2231.html (If you prefer a more permanent setup you could use the FireBeetle2 that doesn't have headers pre-soldered)
- - DFRobot Fermion: 3.5” 480x320 TFT LCD Capacitive Touchscreen - DFR0669 - https://www.dfrobot.com/product-2107.html
- - DFRobot Fermion: EC11 Rotary Encoder - SEN0235 - https://www.dfrobot.com/product-1611.html
- - DFRobot Fermion: LIS2DW12 Triple Axis Accelerometer - SEN0405 - https://www.dfrobot.com/product-2337.html **(This is optional but will allow the throttle to rotate the display with orientation)**
- - Miniature Slide Switch SPDT - I used one from here https://www.hobbytronics.co.uk/slide-switch?search=switch
- to fit the case it'll need to be the same dimensions *(19mm long, 5.6mm wide, 5mm high and mounting holes 15mm apart)*
- - 3000mah\2000mah LiPo battery - https://shop.pimoroni.com/products/lipo-battery-pack?variant=20429082247 **⚠ This battery has the terminals the correct way but before connecting any battery check the wires are the right way round on the plug ⚠**
- - All screws are self tapping cap heads;
-	- M2x5mm - x6 (+2 if using accelerometer) (+2 if using 3000mah battery)
-	- M2x8mm - x6 (+2 if using 2000mah battery)
-	- M3x6mm - x2
-	- M3x20mm - x4
-	<p align="center"><img src="docs/imgs/screw-sizes.jpg" width="256"></p>
- - Stranded and solid core wire depending on preference
- - If using headers then you'll need some right angle male, right angle female and standard female
- - Heatshrink for wires
- - MicroSD card (16GB is a good common size)
+## Core Architecture & Key Functions
 
-#
-- [Assembly](/docs/assembly.md)
-- [Web Browser Uploading](/docs/browser.md)
-- [VSCode Uploading](/docs/code.md)
-- [Throttle Setup](/docs/setup.md)
-- [Managing Locos](/docs/locos.md)
-- [Throttle Menu](/docs/menu.md)
-- [Throttle Settings](/docs/settings.md)
-- [Running Locos](/docs/running.md)
-- [Decoder Programming](/docs/programming.md)
+The system is constructed around a single, persistent root layout. The core UI modules are instantiated once into memory during boot, completely eliminating visual teardowns, loading flickers, and latency. 
+
+### 1. System Initialization & Concurrency (`main.cpp`)
+The absolute root of the firmware. 
+- Initializes the ESP32 hardware, the TFT/CYD drivers, and LVGL.
+- Spawns asynchronous FreeRTOS background tasks (`keepWiFiAlive`, `powerCheck`).
+- Intercepts incoming network streams from `AsyncTCP` and routes DCC-EX packets.
+- **Thread Safety**: Governs a global `lvgl_mutex` Semaphore. All asynchronous network/hardware callbacks are strictly locked before mutating LVGL widget states, ensuring the UI loop never panics during concurrent touch inputs.
+
+### 2. Global View Manager (`LVGL_Layouts.cpp / .h`)
+Replaces the legacy view-swapper with a unified native LVGL container system.
+- **Top Status Bar**: Displays real-time battery voltage, WiFi state, Command Station connection, and active locomotive count utilizing dynamic LVGL symbolic icons (`LV_SYMBOL_WIFI`, `LV_SYMBOL_BATTERY_FULL`, etc).
+- **Navigation**: Deploys an `lv_tabview` anchored to the bottom of the screen. It seamlessly hosts the 4 permanent sub-applications, enabling native physical swiping between them.
+
+### 3. Loco Control (`LocoUI.cpp`)
+The primary dashboard for driving locomotives.
+- **Throttle**: Features an `lv_arc` serving as a dynamic rotary speedometer.
+- **Function Mapping**: Parses `[address].json` files from SPIFFS/SD to dynamically generate a dual-column scrolling list of `F0-F28` buttons specific to the active locomotive.
+- **Selection Submenu**: Clicking the active address instantly spawns a hidden overlay popup menu, allowing you to seamlessly swap locomotives via keypad entry.
+- **Direction / E-Stop**: Instant DCC directional toggles and emergency track halts.
+
+### 4. Accessory / Turnout Manager (`AccessoriesUI.cpp`)
+A fast-access manager for layout turnouts and switch machines. Tapping ON/OFF dynamically summons a numeric `lv_keyboard` mapped to an input area, letting you rapidly punch in DCC Accessory Addresses (1-2044) and broadcast their states to the track.
+
+### 5. Track Power (`PowerUI.cpp`)
+Binds natively to incoming `BROADCAST_POWER` events from the Command Station. Features tactile toggle switches to safely manipulate power across the Main Track, Programming Track, or electronically join them together.
+
+### 6. Settings & Network Hub (`SettingsUI.cpp`)
+The central configuration layer, structured as its own nested `lv_tabview`.
+- Controls hardware variables like screen brightness (hooked directly into the CYD backlight driver).
+- **Nested Popups**: Contains heavy-duty sub-modules (`WiFiUI.cpp` and `AboutUI.cpp`) that dynamically spawn as opaque overlays over the settings UI. `WiFiUI` renders local AP configuration portals or QR codes, while `AboutUI` cleanly tracks live hardware specs and parses Command Station firmware hashes.
+
+---
+
+## Building and Compiling
+The project is configured out-of-the-box via `platformio.ini`. 
+
+1. Open the repository in **VSCode** with the **PlatformIO** extension installed.
+2. Select the `esp32-2432S028R` environment.
+3. Click **Build** and **Upload** to flash your CYD.
+4. *Important*: Remember to also run **Upload File System Image** (SPIFFS) to upload the necessary loco JSON definitions and system configurations to the ESP32 flash memory.
