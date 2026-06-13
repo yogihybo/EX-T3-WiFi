@@ -1,41 +1,41 @@
-#ifndef WIFI_UI_H
-#define WIFI_UI_H
+#pragma once
 
-#include <UI.h>
+#include <LVGL_CYD.h>
+#include <Settings.h>
+#include <WiFi.h>
 #include <DNSServer.h>
-#include <ThrottleServer.h>
-#include <Elements/Label.h>
+#include <ESPAsyncWebServer.h>
+#include "LVGL_Layouts.h"
 
-class WiFiUI : public UI {
+class WiFiUI : public UIView {
   private:
+    lv_obj_t* _container;
+    lv_obj_t* _labelIP;
+    lv_obj_t* _textareaSSID;
+    lv_obj_t* _textareaPassword;
+    lv_obj_t* _textareaServer;
+    lv_obj_t* _textareaPort;
+    lv_obj_t* _qr;
+    
+    lv_obj_t* _keyboard;
+
     DNSServer dns;
-    ThrottleServer server;
+    AsyncWebServer server;
 
     wifi_event_id_t _ipGotHandler;
     wifi_event_id_t _ipDisconnectedHandler;
-    uint16_t _updatedHandler;
+    uint8_t _updatedHandler;
 
-    Label* _labelSSID;
-    Label* _labelPassword;
-    Label* _labelIP;
-    Label* _labelServer;
-    Label* _labelPort;
-    Label* _labelScan;
+    static void ta_event_cb(lv_event_t * e);
+    static void kb_event_cb(lv_event_t * e);
+    static void close_btn_event_cb(lv_event_t * e);
+    static void loop_timer_cb(lv_timer_t* timer);
 
-    bool _alternateQR = true;
+    lv_timer_t* _loop_timer;
 
-    void drawQR();
-    void keyboard(const String& title, const String &value, void(*setting)(const String&));
-    void keypad(const String& title, uint16_t value, void(*setting)(uint16_t));
   public:
-    WiFiUI();
-    ~WiFiUI();
+    WiFiUI(lv_obj_t* parent);
+    ~WiFiUI() override;
 
-    void loop();
-    void redraw();
-    
-    bool swipe(Swipe swipe = Swipe::NONE);
-    void updated(bool redraw = true);
+    lv_obj_t* getContainer() { return _container; }
 };
-
-#endif

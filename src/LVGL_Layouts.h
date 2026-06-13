@@ -1,11 +1,26 @@
 #pragma once
+
 #include <LVGL_CYD.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
+extern SemaphoreHandle_t lvgl_mutex;
+
+class UIView {
+    public:
+        virtual ~UIView() = default;
+};
 
 extern lv_obj_t* header_bar;
-extern lv_obj_t* content_area;
-extern lv_obj_t* bottom_bar;
+extern lv_obj_t* main_tabview;
+
+extern lv_obj_t* loco_tab;
+extern lv_obj_t* acc_tab;
+extern lv_obj_t* pwr_tab;
+extern lv_obj_t* set_tab;
 
 void setup_lvgl_layouts();
+
 void set_header_loco_count(int count);
 void set_header_wifi_status(bool connected);
 void set_header_cs_status(bool connected);

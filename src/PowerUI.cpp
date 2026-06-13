@@ -1,45 +1,78 @@
-#include <PowerUI.h>
-#include <Elements/Header.h>
+#include "PowerUI.h"
 
-PowerUI::PowerUI(DCCExCS& dccExCS, DCCExCS::Power& power)
+PowerUI::PowerUI(DCCExCS& dccExCS, DCCExCS::Power& power, lv_obj_t* parent)
     : _dccExCS(dccExCS), _power(power) {
-  _elements.reserve(10);
+  
+  _container = lv_obj_create(parent);
+  lv_obj_set_size(_container, LV_PCT(100), LV_PCT(100));
+  lv_obj_align(_container, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_set_style_pad_all(_container, 0, 0);
+  lv_obj_set_style_border_width(_container, 0, 0);
 
-  _broadcastPowerHandler = _dccExCS.addEventListener(DCCExCS::Event::BROADCAST_POWER, [this](void*) {
-    _tasks.push_back([this] {
-      _powerAll->setState(_power.main && _power.prog ? Button::State::PRESSED : Button::State::IDLE);
-      _powerMain->setState(_power.main ? Button::State::PRESSED : Button::State::IDLE);
-      _powerProg->setState(_power.prog ? Button::State::PRESSED : Button::State::IDLE);
-      _powerJoin->setState(_power.join ? Button::State::PRESSED : Button::State::IDLE);
-    });
-  });
+  lv_obj_t* title = lv_label_create(_container);
+  lv_label_set_text(title, "Track Power Control");
+  lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
 
-  addElement<Header>(0, 40, 320, 18, "Track Power Control");
+  auto create_btn = [this](int x, int y, int w, int h, const char* label, int action_id, bool checked) {
+    lv_obj_t* btn = lv_btn_create(_container);
+    lv_obj_set_size(btn, w, h);
+    lv_obj_align(btn, LV_ALIGN_TOP_MID, x, y);
+    lv_obj_add_flag(btn, LV_OBJ_FLAG_CHECKABLE);
+    if (checked) lv_obj_add_state(btn, LV_STATE_CHECKED);
+    lv_obj_t* lbl = lv_label_create(btn);
+    lv_label_set_text(lbl, label);
+    lv_obj_center(lbl);
+    lv_obj_set_user_data(btn, (void*)(uintptr_t)action_id);
+    lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_VALUE_CHANGED, this);
+    return btn;
+  };
 
-  // Main and Programming Track side-by-side
-  _powerMain = addElement<Button>(10, 80, 145, 60, "On Main", "Off Main", true, _power.main ? Button::State::PRESSED : Button::State::IDLE);
-  _powerMain->onRelease([this](void*) {
-    _dccExCS.setCSPower(DCCExCS::Power::MAIN, _powerMain->getState() == Button::State::PRESSED);
-  });
+  _powerMain = create_btn(-80, 50, 140, 50, "Main", 1, _power.main);
+  _powerProg = create_btn(80, 50, 140, 50, "Prog", 2, _power.prog);
+  _powerAll = create_btn(0, 110, 300, 50, "All Tracks", 3, _power.main && _power.prog);
+  _powerJoin = create_btn(0, 170, 300, 50, "Join Tracks", 4, _power.join);
 
-  _powerProg = addElement<Button>(165, 80, 145, 60, "On Prog", "Off Prog", true, _power.prog ? Button::State::PRESSED : Button::State::IDLE);
-  _powerProg->onRelease([this](void*) {
-    _dccExCS.setCSPower(DCCExCS::Power::PROG, _powerProg->getState() == Button::State::PRESSED);
-  });
+  _broadcastPowerHandler = _dccExCS.addEventListener(DCCExCS::Event::BROADCAST_POWER, [this](void* parameter) {
+    if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+        auto power = *static_cast<DCCExCS::Power*>(parameter);
 
-  // Turn ON/OFF all tracks
-  _powerAll = addElement<Button>(10, 160, 300, 60, "On All Tracks", "Off All Tracks", true, _power.main && _power.prog ? Button::State::PRESSED : Button::State::IDLE);
-  _powerAll->onRelease([this](void*) {
-    _dccExCS.setCSPower(DCCExCS::Power::ALL, _powerAll->getState() == Button::State::PRESSED);
-  });
+        if (_powerMain) {
+          if (power.main) lv_obj_add_state(_powerMain, LV_STATE_CHECKED);
+          else lv_obj_clear_state(_powerMain, LV_STATE_CHECKED);
+        }
 
-  // Join Main and Programming tracks
-  _powerJoin = addElement<Button>(10, 240, 300, 60, "Join Tracks", "Join Tracks", true, _power.join ? Button::State::PRESSED : Button::State::IDLE);
-  _powerJoin->onRelease([this](void*) {
-    _dccExCS.setCSPower(DCCExCS::Power::JOIN, _powerJoin->getState() == Button::State::PRESSED);
+        if (_powerProg) {
+          if (power.prog) lv_obj_add_state(_powerProg, LV_STATE_CHECKED);
+          else lv_obj_clear_state(_powerProg, LV_STATE_CHECKED);
+        }
+
+        if (_powerAll) {
+          if (power.main && power.prog) lv_obj_add_state(_powerAll, LV_STATE_CHECKED);
+          else lv_obj_clear_state(_powerAll, LV_STATE_CHECKED);
+        }
+
+        if (_powerJoin) {
+          if (power.join) lv_obj_add_state(_powerJoin, LV_STATE_CHECKED);
+          else lv_obj_clear_state(_powerJoin, LV_STATE_CHECKED);
+        }
+        xSemaphoreGive(lvgl_mutex);
+    }
   });
 }
 
 PowerUI::~PowerUI() {
   _dccExCS.removeEventListener(DCCExCS::Event::BROADCAST_POWER, _broadcastPowerHandler);
+  if (_container) lv_obj_del(_container);
+}
+
+void PowerUI::btn_event_cb(lv_event_t * e) {
+  PowerUI* ui = (PowerUI*)lv_event_get_user_data(e);
+  lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+  int action = (int)(uintptr_t)lv_obj_get_user_data(btn);
+  bool state = lv_obj_has_state(btn, LV_STATE_CHECKED);
+
+  if (action == 1) ui->_dccExCS.setCSPower(DCCExCS::Power::MAIN, state);
+  else if (action == 2) ui->_dccExCS.setCSPower(DCCExCS::Power::PROG, state);
+  else if (action == 3) ui->_dccExCS.setCSPower(DCCExCS::Power::ALL, state);
+  else if (action == 4) ui->_dccExCS.setCSPower(DCCExCS::Power::JOIN, state);
 }

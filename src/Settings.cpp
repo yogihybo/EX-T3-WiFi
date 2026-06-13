@@ -20,6 +20,7 @@ void SettingsClass::load() {
     }
 
     rotation = doc["rotation"] | rotation;
+    brightness = doc["brightness"] | brightness;
     pin = doc["pin"] | pin;
     emergencyStop = doc["emergencyStop"] | emergencyStop;
 
@@ -36,6 +37,7 @@ void SettingsClass::save() {
 
   doc["version"] = version;
   doc["rotation"] = rotation;
+  doc["brightness"] = brightness;
   doc["pin"] = pin;
   doc["emergencyStop"] = emergencyStop;
 

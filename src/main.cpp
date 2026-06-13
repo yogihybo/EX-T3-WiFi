@@ -11,6 +11,13 @@
 
 #include "LVGL_Layouts.h"
 
+#include "LocoUI.h"
+#include "AccessoriesUI.h"
+#include "PowerUI.h"
+#include "SettingsUI.h"
+#include "WiFiUI.h"
+#include <memory>
+
 const uint32_t POWER_CHECK = 60000 * 2; // 2 Minutes
 const uint8_t BATTERY_PIN = 34;
 const uint16_t CONNECTION_ALIVE_DELAY = 5000;
@@ -21,6 +28,11 @@ uint16_t csBufferLen = 0;
 DCCExCS dccExCS(csClient);
 DCCExCS::Power power;
 Locos locos;
+
+LocoUI* locoUI;
+AccessoriesUI* accUI;
+PowerUI* pwrUI;
+SettingsUI* setUI_ptr;
 
 void keepWiFiAlive(void *) {
   for (;;) {
@@ -51,9 +63,18 @@ void powerCheck(void *) {
     voltage *= 2;
     voltage /= 1000;
 
-    set_header_power_status(voltage);
+    if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+        set_header_power_status(voltage);
+        xSemaphoreGive(lvgl_mutex);
+    }
     vTaskDelay(POWER_CHECK / portTICK_PERIOD_MS);
   }
+}
+
+void apply_rotation() {
+  lv_display_rotation_t rot = USB_DOWN;
+  if (Settings.rotation == SettingsClass::Rotation::INVERTED) rot = USB_UP;
+  lv_display_set_rotation(lv_display_get_default(), rot);
 }
 
 void setup() {
@@ -63,12 +84,27 @@ void setup() {
   SPIFFS.begin(true);
 
   // Initialize LVGL_CYD framework (handles Display, Touch, Backlight)
-  LVGL_CYD::begin(USB_LEFT);
+  LVGL_CYD::begin(USB_DOWN);
 
   setup_lvgl_layouts();
 
+  locoUI = new LocoUI(dccExCS, locos, loco_tab);
+  accUI = new AccessoriesUI(dccExCS, acc_tab);
+  pwrUI = new PowerUI(dccExCS, power, pwr_tab);
+  setUI_ptr = new SettingsUI(dccExCS, set_tab);
+
   // Load the settings
   Settings.load();
+
+  apply_rotation();
+  Settings.addEventListener(SettingsClass::Event::ROTATION_CHANGE, [](void*) {
+      apply_rotation();
+  });
+
+  LVGL_CYD::backlight(Settings.brightness);
+  Settings.addEventListener(SettingsClass::Event::BRIGHTNESS_CHANGE, [](void*) {
+      LVGL_CYD::backlight(Settings.brightness);
+  });
 
   // Setup the WiFi
   WiFi.setHostname(Settings.AP.SSID.c_str());
@@ -79,22 +115,35 @@ void setup() {
   // WiFi connected
   WiFi.onEvent(
       [](WiFiEvent_t event, WiFiEventInfo_t info) {
-        set_header_wifi_status(true);
+        if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+            set_header_wifi_status(true);
+            xSemaphoreGive(lvgl_mutex);
+        }
         connectToCS();
       },
       ARDUINO_EVENT_WIFI_STA_GOT_IP);
   // WiFi disconnected
   WiFi.onEvent([](WiFiEvent_t event,
-                  WiFiEventInfo_t info) { set_header_wifi_status(false); },
-               ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+                  WiFiEventInfo_t info) { 
+        if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+            set_header_wifi_status(false); 
+            xSemaphoreGive(lvgl_mutex);
+        }
+  }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   // CS connected
   csClient.onConnect([](void *arg, AsyncClient *client) {
-    set_header_cs_status(true);
+    if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+        set_header_cs_status(true);
+        xSemaphoreGive(lvgl_mutex);
+    }
     dccExCS.getCSPower(); // Get current power status
   });
   // CS disconnected
   csClient.onDisconnect([](void *arg, AsyncClient *client) {
-    set_header_cs_status(false);
+    if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+        set_header_cs_status(false);
+        xSemaphoreGive(lvgl_mutex);
+    }
     connectToCS();
   });
   // If the connection to the CS times out then close it so it'll attempt a reconnect
@@ -119,7 +168,10 @@ void setup() {
   // Aquired loco count change
   locos.addEventListener(Locos::Event::COUNT_CHANGE, [](void *parameter) {
     auto count = *static_cast<uint8_t *>(parameter);
-    set_header_loco_count(count);
+    if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+        set_header_loco_count(count);
+        xSemaphoreGive(lvgl_mutex);
+    }
   });
 
   // CS Power event
@@ -135,9 +187,13 @@ void setup() {
 
   xTaskCreatePinnedToCore(powerCheck, "powerCheck", 1024, NULL, 1, NULL, 1);
   xTaskCreatePinnedToCore(keepWiFiAlive, "keepWiFiAlive", 2048, NULL, 1, NULL, 1);
+
 }
 
 void loop() {
-  lv_timer_handler();
+  if (lvgl_mutex && xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+      lv_timer_handler();
+      xSemaphoreGive(lvgl_mutex);
+  }
   delay(5);
 }

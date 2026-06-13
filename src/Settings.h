@@ -15,6 +15,7 @@ class SettingsClass : public Events {
     struct Event {
       static constexpr uint8_t CS_CHANGE = 0;
       static constexpr uint8_t ROTATION_CHANGE = 1;
+      static constexpr uint8_t BRIGHTNESS_CHANGE = 2;
     };
     struct Rotation {
       static constexpr uint8_t STANDARD = 0;
@@ -24,6 +25,7 @@ class SettingsClass : public Events {
 
     uint32_t version = 0;
     uint8_t rotation = Rotation::STANDARD;
+    uint8_t brightness = 255;
     uint32_t pin = 0;
     uint16_t emergencyStop = 2000;
 
