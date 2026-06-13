@@ -1,158 +1,121 @@
-#include <Children/Keypad.h>
-#include <Components/Paging.h>
-#include <Elements/Button.h>
-#include <Elements/Header.h>
-#include <Elements/Label.h>
-#include <Settings.h>
-#include <SettingsUI.h>
+#include "SettingsUI.h"
+#include "WiFiUI.h"
+#include "AboutUI.h"
 
+SettingsUI::SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), _wifiUI(nullptr), _aboutUI(nullptr) {
+  _container = lv_obj_create(parent);
+  lv_obj_set_size(_container, LV_PCT(100), LV_PCT(100));
+  lv_obj_align(_container, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_set_style_pad_all(_container, 0, 0);
+  lv_obj_set_style_border_width(_container, 0, 0);
 
-SettingsUI::SettingsUI() : Page1(*this), Page2(*this), Page3(*this) {
-  _elements.reserve(20);
+  _tabview = lv_tabview_create(_container);
+  lv_tabview_set_tab_bar_position(_tabview, LV_DIR_TOP);
+  lv_tabview_set_tab_bar_size(_tabview, 40);
 
-  addComponent<Paging>(_pages.size())
-      ->addEventListener(Paging::Event::CHANGED, [this](void *parameter) {
-        UI::tft->fillRect(0, 30, 320, 405, UI::COLOR_MAIN_BG);
-        _elements.clear();
-        uint8_t page = *static_cast<uint8_t *>(parameter);
-        _pages[page - 1]();
-      });
+  lv_obj_t* tab1 = lv_tabview_add_tab(_tabview, "Loco");
+  lv_obj_t* tab2 = lv_tabview_add_tab(_tabview, "System");
+  lv_obj_t* tab3 = lv_tabview_add_tab(_tabview, "Conn");
 
-  _pages[0]();
+  // Tab 1: Loco Options
+  lv_obj_set_flex_flow(tab1, LV_FLEX_FLOW_COLUMN);
+  
+  lv_obj_t* speed_btn = lv_btn_create(tab1);
+  lv_obj_set_width(speed_btn, LV_PCT(100));
+  _speedStepLbl = lv_label_create(speed_btn);
+  lv_label_set_text_fmt(_speedStepLbl, "Speed Step: %d", Settings.LocoUI.speedStep);
+  lv_obj_center(_speedStepLbl);
+  lv_obj_add_event_cb(speed_btn, speed_step_event_cb, LV_EVENT_CLICKED, this);
+
+  // Tab 2: System
+  lv_obj_set_flex_flow(tab2, LV_FLEX_FLOW_COLUMN);
+
+  lv_obj_t* rot_btn = lv_btn_create(tab2);
+  lv_obj_set_width(rot_btn, LV_PCT(100));
+  _rotationLbl = lv_label_create(rot_btn);
+  lv_label_set_text_fmt(_rotationLbl, "Rotation: %d", Settings.rotation);
+  lv_obj_center(_rotationLbl);
+  lv_obj_add_event_cb(rot_btn, rotation_event_cb, LV_EVENT_CLICKED, this);
+
+  lv_obj_t* br_cont = lv_obj_create(tab2);
+  lv_obj_set_width(br_cont, LV_PCT(100));
+  lv_obj_set_height(br_cont, 80);
+  _brightnessLbl = lv_label_create(br_cont);
+  lv_label_set_text_fmt(_brightnessLbl, "Brightness: %d%%", (Settings.brightness * 100) / 255);
+  lv_obj_align(_brightnessLbl, LV_ALIGN_TOP_MID, 0, 0);
+  lv_obj_t* br_slider = lv_slider_create(br_cont);
+  lv_obj_set_width(br_slider, 180);
+  lv_obj_align(br_slider, LV_ALIGN_BOTTOM_MID, 0, -10);
+  lv_slider_set_range(br_slider, 10, 255);
+  lv_slider_set_value(br_slider, Settings.brightness, LV_ANIM_OFF);
+  lv_obj_add_event_cb(br_slider, brightness_event_cb, LV_EVENT_VALUE_CHANGED, this);
+
+  _pinBtn = lv_btn_create(tab2);
+  lv_obj_set_width(_pinBtn, LV_PCT(100));
+  lv_obj_t* pin_lbl = lv_label_create(_pinBtn);
+  lv_label_set_text(pin_lbl, Settings.pin == 0 ? "Pin: Not Set" : "Pin: Set");
+  lv_obj_center(pin_lbl);
+
+  // Tab 3: Connections
+  lv_obj_set_flex_flow(tab3, LV_FLEX_FLOW_COLUMN);
+
+  lv_obj_t* wifi_btn = lv_btn_create(tab3);
+  lv_obj_set_width(wifi_btn, LV_PCT(100));
+  lv_obj_t* wifi_lbl = lv_label_create(wifi_btn);
+  lv_label_set_text(wifi_lbl, "WiFi Setup");
+  lv_obj_center(wifi_lbl);
+  lv_obj_add_event_cb(wifi_btn, wifi_setup_event_cb, LV_EVENT_CLICKED, this);
+
+  lv_obj_t* about_btn = lv_btn_create(tab3);
+  lv_obj_set_width(about_btn, LV_PCT(100));
+  lv_obj_t* about_lbl = lv_label_create(about_btn);
+  lv_label_set_text(about_lbl, "About Controller");
+  lv_obj_center(about_lbl);
+  lv_obj_add_event_cb(about_btn, about_event_cb, LV_EVENT_CLICKED, this);
 }
 
-SettingsUI::~SettingsUI() { Settings.save(); }
+SettingsUI::~SettingsUI() {
+  Settings.save();
+  if (_wifiUI) delete _wifiUI;
+  if (_aboutUI) delete _aboutUI;
+  if (_container) lv_obj_del(_container);
+}
 
-void SettingsUI::Page1::swipeAction(void *button, uint8_t &gesture,
-                                    uint8_t actions) {
-  if (++gesture > actions) {
-    gesture = 0;
+void SettingsUI::speed_step_event_cb(lv_event_t * e) {
+  SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
+  if (++Settings.LocoUI.speedStep > 2) Settings.LocoUI.speedStep = 0;
+  lv_label_set_text_fmt(ui->_speedStepLbl, "Speed Step: %d", Settings.LocoUI.speedStep);
+}
+
+void SettingsUI::rotation_event_cb(lv_event_t * e) {
+  SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
+  if (++Settings.rotation > 2) Settings.rotation = 0;
+  lv_label_set_text_fmt(ui->_rotationLbl, "Rotation: %d", Settings.rotation);
+  Settings.dispatchEvent(SettingsClass::Event::ROTATION_CHANGE);
+}
+
+void SettingsUI::brightness_event_cb(lv_event_t * e) {
+  SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
+  lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
+  Settings.brightness = lv_slider_get_value(slider);
+  lv_label_set_text_fmt(ui->_brightnessLbl, "Brightness: %d%%", (Settings.brightness * 100) / 255);
+  Settings.dispatchEvent(SettingsClass::Event::BRIGHTNESS_CHANGE);
+}
+
+void SettingsUI::wifi_setup_event_cb(lv_event_t * e) {
+  SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
+  if (!ui->_wifiUI) {
+      ui->_wifiUI = new WiFiUI(ui->_container);
+  } else {
+      lv_obj_clear_flag(ui->_wifiUI->getContainer(), LV_OBJ_FLAG_HIDDEN);
   }
-
-  static_cast<Button *>(button)->setLabel(_swipActionLabels[gesture]);
 }
 
-void SettingsUI::Page1::show() {
-  _ui.addElement<Header>(0, 40, 320, 18, "Loco UI Options");
-
-  _ui.addElement<Label>(0, 84, 130, 18, "Speed Step:");
-  _ui.addElement<Button>(170, 70, 150, 42,
-                         _speedStepLabels[Settings.LocoUI.speedStep])
-      ->onRelease([this](void *parameter) {
-        if (++Settings.LocoUI.speedStep > 2) {
-          Settings.LocoUI.speedStep = 0;
-        }
-
-        static_cast<Button *>(parameter)->setLabel(
-            _speedStepLabels[Settings.LocoUI.speedStep]);
-      });
-
-  _ui.addElement<Label>(0, 133, 130, 18, "Swipe Up:");
-  _ui.addElement<Button>(170, 119, 150, 42,
-                         _swipActionLabels[Settings.LocoUI.Swipe.up])
-      ->onRelease([this](void *parameter) {
-        swipeAction(parameter, Settings.LocoUI.Swipe.up, 6);
-      });
-
-  _ui.addElement<Label>(0, 182, 130, 18, "Swipe Down:");
-  _ui.addElement<Button>(170, 168, 150, 42,
-                         _swipActionLabels[Settings.LocoUI.Swipe.down])
-      ->onRelease([this](void *parameter) {
-        swipeAction(parameter, Settings.LocoUI.Swipe.down, 6);
-      });
-
-  _ui.addElement<Label>(0, 231, 130, 18, "Swipe Left:");
-  _ui.addElement<Button>(170, 217, 150, 42,
-                         _swipActionLabels[Settings.LocoUI.Swipe.left])
-      ->onRelease([this](void *parameter) {
-        swipeAction(parameter, Settings.LocoUI.Swipe.left, 6);
-      });
-
-  _ui.addElement<Label>(0, 280, 130, 18, "Swipe Right:");
-  _ui.addElement<Button>(170, 266, 150, 42,
-                         _swipActionLabels[Settings.LocoUI.Swipe.right])
-      ->onRelease([this](void *parameter) {
-        swipeAction(parameter, Settings.LocoUI.Swipe.right, 6);
-      });
-
-  _ui.addElement<Label>(0, 329, 130, 18, "After Swipe Release:");
-  _ui.addElement<Button>(170, 315, 150, 42,
-                         _swipActionLabels[Settings.LocoUI.Swipe.release])
-      ->onRelease([this](void *parameter) {
-        swipeAction(parameter, Settings.LocoUI.Swipe.release, 5);
-      });
-}
-
-void SettingsUI::Page2::show() {
-  _ui.addElement<Header>(0, 40, 320, 18, "Screen Rotation");
-
-  _ui.addElement<Button>(0, 70, 320, 42, _rotationLabels[Settings.rotation])
-      ->onRelease([this](void *parameter) {
-        if (++Settings.rotation > 2) {
-          Settings.rotation = 0;
-        }
-
-        static_cast<Button *>(parameter)->setLabel(
-            _rotationLabels[Settings.rotation]);
-        Settings.dispatchEvent(SettingsClass::Event::ROTATION_CHANGE);
-      });
-
-  _ui.addElement<Header>(0, 124, 320, 18,
-                         "Pin Protect (For WiFi and Settings)");
-
-  _ui.addElement<Button>(0, 154, 320, 42, "Not Set", "Pin Set", false,
-                         Settings.pin == 0 ? Button::State::IDLE
-                                           : Button::State::PRESSED)
-      ->onRelease([this](void *parameter) {
-        auto keypad = _ui.setChild<Keypad>("Set Pin");
-        keypad->addEventListener(
-            Keypad::Event::ENTER,
-            [this, btn = static_cast<Button *>(parameter)](void *parameter) {
-              Settings.pin = *static_cast<uint32_t *>(parameter);
-              btn->setState(Settings.pin == 0 ? Button::State::IDLE
-                                              : Button::State::PRESSED,
-                            false);
-              _ui._tasks.push_back([this] { _ui.reset(true); });
-            });
-        keypad->addEventListener(
-            Keypad::Event::CANCEL,
-            [this, btn = static_cast<Button *>(parameter)](void *) {
-              btn->setState(Settings.pin == 0 ? Button::State::IDLE
-                                              : Button::State::PRESSED,
-                            false);
-              _ui._tasks.push_back([this] { _ui.reset(true); });
-            });
-      });
-
-  _ui.addElement<Header>(0, 208, 320, 18,
-                         "Emergency Stop Trigger Hold Duration");
-
-  _ui.addElement<Button>(0, 238, 320, 42, String(Settings.emergencyStop))
-      ->onRelease([this](void *parameter) {
-        auto duration = _ui.setChild<Keypad>("Set Duration", 5000, 1000);
-        duration->addEventListener(
-            Keypad::Event::ENTER,
-            [this, btn = static_cast<Button *>(parameter)](void *parameter) {
-              Settings.emergencyStop = *static_cast<uint16_t *>(parameter);
-              btn->setLabel(String(Settings.emergencyStop));
-              _ui._tasks.push_back([this] { _ui.reset(true); });
-            });
-        duration->addEventListener(
-            Keypad::Event::CANCEL,
-            [this, btn = static_cast<Button *>(parameter)](void *) {
-              _ui._tasks.push_back([this] { _ui.reset(true); });
-            });
-      });
-}
-
-void SettingsUI::Page3::show() {
-  _ui.addElement<Header>(0, 40, 320, 18, "Connections");
-
-  _ui.addElement<Button>(0, 70, 320, 42, "WiFi Setup")
-      ->onRelease([this](void *) { _ui.dispatchEvent(Event::WIFI); });
-
-  _ui.addElement<Header>(0, 124, 320, 18, "Information");
-
-  _ui.addElement<Button>(0, 154, 320, 42, "About Controller")
-      ->onRelease([this](void *) { _ui.dispatchEvent(Event::ABOUT); });
+void SettingsUI::about_event_cb(lv_event_t * e) {
+  SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
+  if (!ui->_aboutUI) {
+      ui->_aboutUI = new AboutUI(ui->_dccExCS, ui->_container);
+  } else {
+      lv_obj_clear_flag(ui->_aboutUI->getContainer(), LV_OBJ_FLAG_HIDDEN);
+  }
 }

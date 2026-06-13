@@ -1,22 +1,25 @@
-#ifndef ABOUT_UI_H
-#define ABOUT_UI_H
+#pragma once
 
-#include <UI.h>
+#include <LVGL_CYD.h>
 #include <DCCExCS.h>
-#include <Elements/Label.h>
+#include "LVGL_Layouts.h"
 
-class AboutUI : public UI {
+class AboutUI : public UIView {
   private:
+    lv_obj_t* _container;
     DCCExCS& _dccExCS;
     uint16_t _csVersionHandler;
 
-    Label* _csVersion;
-    Label* _csBoard;
-    Label* _csShield;
-    Label* _csBuild;
-  public:
-    AboutUI(DCCExCS& dccExCS);
-    ~AboutUI();
-};
+    lv_obj_t* _csVersion;
+    lv_obj_t* _csBoard;
+    lv_obj_t* _csShield;
+    lv_obj_t* _csBuild;
 
-#endif
+    static void close_btn_event_cb(lv_event_t * e);
+
+  public:
+    AboutUI(DCCExCS& dccExCS, lv_obj_t* parent);
+    ~AboutUI() override;
+
+    lv_obj_t* getContainer() { return _container; }
+};

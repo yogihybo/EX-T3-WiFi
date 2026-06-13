@@ -1,59 +1,31 @@
-#ifndef SETTINGS_UI_H
-#define SETTINGS_UI_H
+#pragma once
 
-#include <UI.h>
+#include <LVGL_CYD.h>
 #include <Settings.h>
+#include <DCCExCS.h>
+#include "LVGL_Layouts.h"
 
-class SettingsUI : public UI, public Events {
+class SettingsUI : public UIView {
   private:
-    class Page {
-      protected:
-        SettingsUI& _ui;
-      public:
-        Page(SettingsUI& ui) : _ui(ui) { }
+    lv_obj_t* _container;
+    lv_obj_t* _tabview;
+    DCCExCS& _dccExCS;
 
-        virtual void show() = 0;
-    };
+    class WiFiUI* _wifiUI;
+    class AboutUI* _aboutUI;
 
-    class Page1 : Page {
-      using Page::Page;
+    lv_obj_t* _speedStepLbl;
+    lv_obj_t* _rotationLbl;
+    lv_obj_t* _pinBtn;
+    lv_obj_t* _brightnessLbl;
 
-      char _speedStepLabels[3][2] = { "1", "2", "4" };
-      char _swipActionLabels[7][12] = { "None", "Keypad", "Loco Names", "Loco Groups", "Next Loco", "Prev Loco", "Release" };
+    static void speed_step_event_cb(lv_event_t * e);
+    static void rotation_event_cb(lv_event_t * e);
+    static void brightness_event_cb(lv_event_t * e);
+    static void wifi_setup_event_cb(lv_event_t * e);
+    static void about_event_cb(lv_event_t * e);
 
-      void swipeAction(void* button, uint8_t& gesture, uint8_t actions);
-    public:
-      void show();
-    } Page1;
-
-    class Page2 : Page {
-      using Page::Page;
-
-      char _rotationLabels[3][30] = { "Standard", "Inverted", "Accelerometer (if applicable)" };
-      char _pinLabels[2][8] = { "Not Set", "Pin Set" };
-    public:
-      void show();
-    } Page2;
-
-    class Page3 : Page {
-      using Page::Page;
-    public:
-      void show();
-    } Page3;
-
-    std::vector<std::function<void (void)>> _pages = {
-      [this] { Page1.show(); },
-      [this] { Page2.show(); },
-      [this] { Page3.show(); }
-    };
   public:
-    struct Event {
-      static constexpr uint8_t WIFI = 0;
-      static constexpr uint8_t ABOUT = 1;
-    };
-
-    SettingsUI();
-    ~SettingsUI();
+    SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent);
+    ~SettingsUI() override;
 };
-
-#endif
