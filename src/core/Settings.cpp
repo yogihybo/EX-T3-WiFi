@@ -189,3 +189,10 @@ void SettingsClass::LocoUI::Swipe::save(const JsonObject& obj) {
 }
 
 SettingsClass Settings;
+
+fs::FS& SettingsClass::getFS() const {
+  if (storageMode == StorageMode::SD_CARD && SD.cardType() != CARD_NONE) {
+    return (fs::FS&)SD;
+  }
+  return (fs::FS&)SPIFFS;
+}

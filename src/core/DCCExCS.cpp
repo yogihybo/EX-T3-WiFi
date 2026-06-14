@@ -23,14 +23,18 @@ void DCCExCS::handleCS(uint8_t* data, uint16_t size) {
   std::string str(reinterpret_cast<char*>(data), size);
   std::smatch matches;
   
-  if (std::regex_search(str, matches, std::regex("l (\\d+) -?\\d+ (\\d+) (\\d+)"))) { // Loco broadcast
+  static const std::regex loco_regex("l (\\d+) -?\\d+ (\\d+) (\\d+)");
+  static const std::regex power_regex("p(\\d)\\s?(\\w+)?");
+  static const std::regex version_regex("iDCC-EX V-([^\\s]+) \\/ ([^\\s]+) \\/ ([^\\s]+) (.+)");
+
+  if (std::regex_search(str, matches, loco_regex)) { // Loco broadcast
     uint16_t address = fromChars<uint16_t>(matches.str(1));
     uint8_t speedCode = fromChars<uint8_t>(matches.str(2));
     uint32_t functions = fromChars<uint32_t>(matches.str(3));
 
     Loco loco(address, speedCode, functions);
     dispatchEvent(Event::BROADCAST_LOCO, &loco);
-  } else if (std::regex_search(str, matches, std::regex("p(\\d)\\s?(\\w+)?"))) { // Power broadcast
+  } else if (std::regex_search(str, matches, power_regex)) { // Power broadcast
     Power power;
 
     if (matches.str(1)[0] == '1') {
@@ -51,10 +55,10 @@ void DCCExCS::handleCS(uint8_t* data, uint16_t size) {
     }
 
     dispatchEvent(Event::BROADCAST_POWER, &power);
-  } else if (std::regex_search(str, matches, std::regex("iDCC-EX V-([^\\s]+) \\/ ([^\\s]+) \\/ ([^\\s]+) (.+)"))) { // Version response
+  } else if (std::regex_search(str, matches, version_regex)) { // Version response
     Version version(matches.str(1).c_str(), matches.str(2).c_str(), matches.str(3).c_str(), matches.str(4).c_str());
     dispatchEvent(Event::VERSION, &version);
-  } else if (_response.matched && std::regex_search(str, matches, std::regex(_response.match))) { // Response to prog
+  } else if (_response.matched && std::regex_search(str, matches, _response.match)) { // Response to prog
     deleteTimeout();
     _response.matched(matches);
     _response.matched = NULL;
@@ -80,7 +84,7 @@ void DCCExCS::setCSPower(uint8_t power, bool state) {
   }
 
   char buf[10];
-  sprintf(buf, "<%d%s>\n", state ? 1 : 0, cmd);
+  snprintf(buf, sizeof(buf), "<%d%s>\n", state ? 1 : 0, cmd);
   _csClient.write(buf);
 }
 
@@ -90,31 +94,31 @@ void DCCExCS::emergencyStopAll() {
 
 void DCCExCS::acquireLoco(uint16_t address) {
   char buf[12];
-  sprintf(buf, "<t %d>\n", address);
+  snprintf(buf, sizeof(buf), "<t %d>\n", address);
   _csClient.write(buf);
 }
 
 void DCCExCS::releaseLoco(uint16_t address) {
   char buf[12];
-  sprintf(buf, "<- %d>\n", address);
+  snprintf(buf, sizeof(buf), "<- %d>\n", address);
   _csClient.write(buf);
 }
 
 void DCCExCS::setLocoThrottle(uint16_t address, int8_t speed, uint8_t direction) {
   char buf[20];
-  sprintf(buf, "<t %d %d %d>\n", address, speed, direction);
+  snprintf(buf, sizeof(buf), "<t %d %d %d>\n", address, speed, direction);
   _csClient.write(buf);
 }
 
 void DCCExCS::setLocoFn(uint16_t address, uint8_t fn, bool state) {
   char buf[18];
-  sprintf(buf, "<F %d %d %d>\n", address, fn, state);
+  snprintf(buf, sizeof(buf), "<F %d %d %d>\n", address, fn, state);
   _csClient.write(buf);
 }
 
 void DCCExCS::getLocoAddress() {
   _response = {
-    "r (-?\\d+)",
+    std::regex("r (-?\\d+)"),
     [this](std::smatch &matches) {
       int16_t result = fromChars<int16_t>(matches.str(1));
       dispatchEvent(DCCExCS::Event::PROGRAM_READ, &result);
@@ -128,7 +132,7 @@ void DCCExCS::getLocoAddress() {
 
 void DCCExCS::setLocoAddress(uint16_t address) {
   _response = {
-    "w (-?\\d+)",
+    std::regex("w (-?\\d+)"),
     [this, address](std::smatch &matches) {
       int16_t result = -1;
       if (fromChars<int16_t>(matches.str(1)) == address) {
@@ -140,7 +144,7 @@ void DCCExCS::setLocoAddress(uint16_t address) {
   };
 
   char buf[12];
-  sprintf(buf, "<W %d>\n", address);
+  snprintf(buf, sizeof(buf), "<W %d>\n", address);
   _csClient.write(buf);
 
   createTimeout();
@@ -148,7 +152,7 @@ void DCCExCS::setLocoAddress(uint16_t address) {
 
 void DCCExCS::getLocoCVByte(uint16_t cv) {
   _response = {
-    "r12345\\|32767\\|(\\d+) (-?\\d+)",
+    std::regex("r12345\\|32767\\|(\\d+) (-?\\d+)"),
     [this, cv](std::smatch &matches) {
       int16_t result = -1;
       if (fromChars<uint16_t>(matches.str(1)) == cv) {
@@ -160,7 +164,7 @@ void DCCExCS::getLocoCVByte(uint16_t cv) {
   };
 
   char buf[22];
-  sprintf(buf, "<R %d 12345 32767>\n", cv);
+  snprintf(buf, sizeof(buf), "<R %d 12345 32767>\n", cv);
   _csClient.write(buf);
 
   createTimeout();
@@ -168,7 +172,7 @@ void DCCExCS::getLocoCVByte(uint16_t cv) {
 
 void DCCExCS::setLocoCVByte(uint16_t cv, uint8_t value) {
   _response = {
-    "r (\\d+) (-?\\d+)",
+    std::regex("r (\\d+) (-?\\d+)"),
     [this, cv, value](std::smatch &matches) {
       int16_t result = -1;
       if (fromChars<uint16_t>(matches.str(1)) == cv &&
@@ -181,7 +185,7 @@ void DCCExCS::setLocoCVByte(uint16_t cv, uint8_t value) {
   };
 
   char buf[14];
-  sprintf(buf, "<W %d %d>\n", cv, value);
+  snprintf(buf, sizeof(buf), "<W %d %d>\n", cv, value);
   _csClient.write(buf);
 
   createTimeout();
@@ -189,7 +193,7 @@ void DCCExCS::setLocoCVByte(uint16_t cv, uint8_t value) {
 
 void DCCExCS::getLocoCVBit(uint16_t cv, uint8_t bit) {
   _response = {
-    "r12345\\|32767\\|(\\d+) (-?\\d+)",
+    std::regex("r12345\\|32767\\|(\\d+) (-?\\d+)"),
     [this, cv, bit](std::smatch &matches) {
       int16_t result = -1;
       if (fromChars<uint16_t>(matches.str(1)) == cv) {
@@ -202,7 +206,7 @@ void DCCExCS::getLocoCVBit(uint16_t cv, uint8_t bit) {
   };
 
   char buf[22];
-  sprintf(buf, "<R %d 12345 32767>\n", cv);
+  snprintf(buf, sizeof(buf), "<R %d 12345 32767>\n", cv);
   _csClient.write(buf);
 
   createTimeout();
@@ -210,7 +214,7 @@ void DCCExCS::getLocoCVBit(uint16_t cv, uint8_t bit) {
 
 void DCCExCS::setLocoCVBit(uint16_t cv, uint8_t bit, bool value) {
   _response = {
-    "r12345\\|32767\\|(\\d+) (\\d+) (-?\\d+)",
+    std::regex("r12345\\|32767\\|(\\d+) (\\d+) (-?\\d+)"),
     [this, cv, bit, value](std::smatch &matches) {
       int16_t result = -1;
       if (fromChars<uint16_t>(matches.str(1)) == cv &&
@@ -224,7 +228,7 @@ void DCCExCS::setLocoCVBit(uint16_t cv, uint8_t bit, bool value) {
   };
 
   char buf[26];
-  sprintf(buf, "<B %d %d %d 12345 32767>\n", cv, bit, value);
+  snprintf(buf, sizeof(buf), "<B %d %d %d 12345 32767>\n", cv, bit, value);
   _csClient.write(buf);
 
   createTimeout();
@@ -232,24 +236,24 @@ void DCCExCS::setLocoCVBit(uint16_t cv, uint8_t bit, bool value) {
 
 void DCCExCS::accessory(uint16_t address, bool state) {
   char buf[12];
-  sprintf(buf, "<a %d %d>\n", address, state ? 1 : 0);
+  snprintf(buf, sizeof(buf), "<a %d %d>\n", address, state ? 1 : 0);
   _csClient.write(buf);
 }
 
 void DCCExCS::setAckLimit(uint16_t limit) {
   char buf[19];
-  sprintf(buf, "<D ACK LIMIT %d>\n", limit);
+  snprintf(buf, sizeof(buf), "<D ACK LIMIT %d>\n", limit);
   _csClient.write(buf);
 }
 
 void DCCExCS::setAckMin(uint16_t min) {
   char buf[19];
-  sprintf(buf, "<D ACK MIN %d>\n", min);
+  snprintf(buf, sizeof(buf), "<D ACK MIN %d>\n", min);
   _csClient.write(buf);
 }
 
 void DCCExCS::setAckMax(uint16_t max) {
   char buf[19];
-  sprintf(buf, "<D ACK MAX %d>\n", max);
+  snprintf(buf, sizeof(buf), "<D ACK MAX %d>\n", max);
   _csClient.write(buf);
 }

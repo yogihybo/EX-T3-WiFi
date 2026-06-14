@@ -13,7 +13,7 @@ class DCCExCS : public Events {
     TimerHandle_t _timeout;
 
     struct {
-      const char* match;
+      std::regex match;
       std::function<void (std::smatch &matches)> matched;
     } _response;
     
