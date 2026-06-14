@@ -2,9 +2,10 @@
 #include <lvgl.h>
 #include <FS.h>
 #include <Settings.h>
+#include <FileSystems.h>
 
 static void * fs_open(lv_fs_drv_t * drv, const char * path, lv_fs_mode_t mode) {
-    fs::FS& fs = Settings.getFS();
+    fs::FS& fs = (drv->letter == 'W') ? (fs::FS&)WebsiteFS : Settings.getFS();
     const char * flags = "";
     if(mode == LV_FS_MODE_WR) flags = FILE_WRITE;
     else if(mode == LV_FS_MODE_RD) flags = FILE_READ;
@@ -61,16 +62,29 @@ static lv_fs_res_t fs_tell(lv_fs_drv_t * drv, void * file_p, uint32_t * pos_p) {
 }
 
 void lv_port_fs_init(void) {
-    static lv_fs_drv_t fs_drv;
-    lv_fs_drv_init(&fs_drv);
+    static lv_fs_drv_t fs_drv_s;
+    lv_fs_drv_init(&fs_drv_s);
 
-    fs_drv.letter = 'S';
-    fs_drv.open_cb = fs_open;
-    fs_drv.close_cb = fs_close;
-    fs_drv.read_cb = fs_read;
-    fs_drv.write_cb = fs_write;
-    fs_drv.seek_cb = fs_seek;
-    fs_drv.tell_cb = fs_tell;
+    fs_drv_s.letter = 'S';
+    fs_drv_s.open_cb = fs_open;
+    fs_drv_s.close_cb = fs_close;
+    fs_drv_s.read_cb = fs_read;
+    fs_drv_s.write_cb = fs_write;
+    fs_drv_s.seek_cb = fs_seek;
+    fs_drv_s.tell_cb = fs_tell;
 
-    lv_fs_drv_register(&fs_drv);
+    lv_fs_drv_register(&fs_drv_s);
+
+    static lv_fs_drv_t fs_drv_w;
+    lv_fs_drv_init(&fs_drv_w);
+
+    fs_drv_w.letter = 'W';
+    fs_drv_w.open_cb = fs_open;
+    fs_drv_w.close_cb = fs_close;
+    fs_drv_w.read_cb = fs_read;
+    fs_drv_w.write_cb = fs_write;
+    fs_drv_w.seek_cb = fs_seek;
+    fs_drv_w.tell_cb = fs_tell;
+
+    lv_fs_drv_register(&fs_drv_w);
 }
