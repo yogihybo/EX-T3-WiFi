@@ -2,6 +2,7 @@
 #include "WiFiUI.h"
 #include "AboutUI.h"
 #include "ProgramUI.h"
+#include <SD.h>
 
 SettingsUI::SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), _wifiUI(nullptr), _aboutUI(nullptr), _programUI(nullptr) {
   _container = lv_obj_create(parent);
@@ -50,12 +51,21 @@ SettingsUI::SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), 
   lv_obj_center(_rotationLbl);
   lv_obj_add_event_cb(rotation_btn, rotation_event_cb, LV_EVENT_CLICKED, this);
 
+#if 0 // SD Card unsupported on CYD hardware due to SPI conflict
   lv_obj_t* storage_btn = lv_btn_create(_container);
   lv_obj_set_width(storage_btn, LV_PCT(100));
   _storageModeLbl = lv_label_create(storage_btn);
   lv_label_set_text_fmt(_storageModeLbl, "Storage: %s", Settings.storageMode == SettingsClass::StorageMode::SD_CARD ? "SD Card" : "Internal");
   lv_obj_center(_storageModeLbl);
   lv_obj_add_event_cb(storage_btn, storage_mode_event_cb, LV_EVENT_CLICKED, this);
+
+  lv_obj_t* sd_format_btn = lv_btn_create(_container);
+  lv_obj_set_width(sd_format_btn, LV_PCT(100));
+  lv_obj_t* sd_format_lbl = lv_label_create(sd_format_btn);
+  lv_label_set_text(sd_format_lbl, "Format SD Card");
+  lv_obj_center(sd_format_lbl);
+  lv_obj_add_event_cb(sd_format_btn, sd_format_event_cb, LV_EVENT_CLICKED, this);
+#endif
 
   lv_obj_t* br_btn = lv_btn_create(_container);
   lv_obj_set_width(br_btn, LV_PCT(100));
@@ -109,11 +119,63 @@ void SettingsUI::rotation_event_cb(lv_event_t * e) {
   Settings.dispatchEvent(SettingsClass::Event::ROTATION_CHANGE);
 }
 
+#if 0 // SD Card unsupported on CYD hardware due to SPI conflict
 void SettingsUI::storage_mode_event_cb(lv_event_t * e) {
   SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
-  Settings.storageMode = (Settings.storageMode == SettingsClass::StorageMode::SPIFFS) ? SettingsClass::StorageMode::SD_CARD : SettingsClass::StorageMode::SPIFFS;
+  Settings.storageMode = Settings.storageMode == SettingsClass::StorageMode::SD_CARD ? SettingsClass::StorageMode::SPIFFS : SettingsClass::StorageMode::SD_CARD;
   lv_label_set_text_fmt(ui->_storageModeLbl, "Storage: %s", Settings.storageMode == SettingsClass::StorageMode::SD_CARD ? "SD Card" : "Internal");
 }
+
+void SettingsUI::sd_format_event_cb(lv_event_t * e) {
+    SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
+    if (ui->_formatMsgbox) return; // Prevent multiple dialogs
+    
+    ui->_formatMsgbox = lv_msgbox_create(lv_layer_top());
+    lv_msgbox_add_title(ui->_formatMsgbox, "Format SD Card?");
+    lv_msgbox_add_text(ui->_formatMsgbox, "Formatting will erase the SD card.\nIf successful the throttle will restart.");
+    
+    lv_obj_t* format_btn = lv_msgbox_add_footer_button(ui->_formatMsgbox, "Format");
+    lv_obj_add_event_cb(format_btn, sd_format_confirm_event_cb, LV_EVENT_CLICKED, ui);
+    
+    lv_obj_t* cancel_btn = lv_msgbox_add_footer_button(ui->_formatMsgbox, "Cancel");
+    lv_obj_add_event_cb(cancel_btn, [](lv_event_t* e) {
+        SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
+        if (ui->_formatMsgbox) {
+            lv_msgbox_close(ui->_formatMsgbox);
+            ui->_formatMsgbox = nullptr;
+        }
+    }, LV_EVENT_CLICKED, ui);
+    
+    lv_obj_center(ui->_formatMsgbox);
+}
+
+void SettingsUI::sd_format_confirm_event_cb(lv_event_t * e) {
+    SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
+    if (ui->_formatMsgbox) {
+        lv_msgbox_close(ui->_formatMsgbox);
+        ui->_formatMsgbox = nullptr;
+    }
+    
+    if (SD.begin(5, SPI, 4000000, "/sd", 5, true)) {
+        ESP.restart();
+    } else {
+        ui->_formatMsgbox = lv_msgbox_create(lv_layer_top());
+        lv_msgbox_add_title(ui->_formatMsgbox, "Format Failed");
+        lv_msgbox_add_text(ui->_formatMsgbox, "Unable to mount SD Card.");
+        
+        lv_obj_t* ok_btn = lv_msgbox_add_footer_button(ui->_formatMsgbox, "OK");
+        lv_obj_add_event_cb(ok_btn, [](lv_event_t* e) {
+            SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
+            if (ui->_formatMsgbox) {
+                lv_msgbox_close(ui->_formatMsgbox);
+                ui->_formatMsgbox = nullptr;
+            }
+        }, LV_EVENT_CLICKED, ui);
+        
+        lv_obj_center(ui->_formatMsgbox);
+    }
+}
+#endif
 
 void SettingsUI::brightness_btn_event_cb(lv_event_t * e) {
   SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
