@@ -19,5 +19,5 @@ def del_gzip_data(source, target, env):
   data = env.get("PROJECT_DATA_DIR")
   shutil.rmtree(data, True)
 
-env.AddPreAction("$BUILD_DIR/spiffs.bin", copy_gzip_data)
-env.AddPostAction("$BUILD_DIR/spiffs.bin", del_gzip_data)
+env.AddPreAction("$BUILD_DIR/littlefs.bin", copy_gzip_data)
+env.AddPostAction("$BUILD_DIR/littlefs.bin", del_gzip_data)

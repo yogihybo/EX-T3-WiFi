@@ -38,7 +38,7 @@ Replaces the legacy view-swapper with a unified native LVGL container system.
 ### 3. Loco Control (`LocoUI.cpp`)
 The primary dashboard for driving locomotives.
 - **Throttle**: Features an `lv_arc` serving as a dynamic rotary speedometer.
-- **Function Mapping**: Parses `[address].json` files from SPIFFS/SD to dynamically generate a dual-column scrolling list of `F0-F28` buttons specific to the active locomotive.
+- **Function Mapping**: Parses `[address].json` files from LittleFS/SD to dynamically generate a dual-column scrolling list of `F0-F28` buttons specific to the active locomotive.
 - **Selection Submenu**: Clicking the active address instantly spawns a hidden overlay popup menu, allowing you to seamlessly swap locomotives via keypad entry.
 - **Direction / E-Stop**: Instant DCC directional toggles and emergency track halts.
 
@@ -61,7 +61,7 @@ The project is configured out-of-the-box via `platformio.ini`.
 1. Open the repository in **VSCode** with the **PlatformIO** extension installed.
 2. Select the `esp32-2432S028R` environment.
 3. Click **Build** and **Upload** to flash your CYD.
-4. *Important*: Remember to also run **Upload File System Image** (SPIFFS) to upload the necessary loco JSON definitions and system configurations to the ESP32 flash memory.
+4. *Important*: Remember to also run **Upload File System Image** (LittleFS) to upload the necessary loco JSON definitions and system configurations to the ESP32 flash memory. Note: the file system image is flashed to the `website` partition, while the `config` partition is formatted automatically on first boot.
 
 ---
 

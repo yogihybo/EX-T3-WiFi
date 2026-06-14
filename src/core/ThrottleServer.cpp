@@ -1,7 +1,7 @@
 #include <ThrottleServer.h>
 #include <AsyncTCP.h>
 #include <AsyncJson.h>
-#include <SPIFFS.h>
+#include <FileSystems.h>
 #include <SD.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
@@ -11,7 +11,7 @@
 ThrottleServer::ThrottleServer() : AsyncWebServer(80) { }
 
 void ThrottleServer::begin() {
-  serveStatic("/", SPIFFS, "/www/")
+  serveStatic("/", WebsiteFS, "/www/")
     .setCacheControl("max-age=604800")
     .setDefaultFile("index.html");
 
@@ -64,7 +64,7 @@ void ThrottleServer::begin() {
     };
 
     if (path.startsWith("/icons")) {
-      listDir(SPIFFS.open(path), [&list](File file) {
+      listDir(ConfigFS.open(path), [&list](File file) {
         list.add("/$" + String(file.path()));
       });
 

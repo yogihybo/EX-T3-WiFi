@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <SD.h>
 #include <SPI.h>
-#include <SPIFFS.h>
+#include <FileSystems.h>
 #include <LVGL_CYD.h>
 #include <AsyncTCP.h>
 #include <DCCExCS.h>
@@ -92,7 +92,8 @@ void setup() {
   Serial.begin(115200);
 
   // Start file systems
-  SPIFFS.begin(true);
+  ConfigFS.begin(true, "/config", 10, "config");
+  WebsiteFS.begin(true, "/website", 10, "website");
 
   // Initialize LVGL_CYD framework (handles Display, Touch, Backlight)
   LVGL_CYD::begin(USB_DOWN);
