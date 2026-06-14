@@ -193,15 +193,18 @@ void SettingsUI::brightness_btn_event_cb(lv_event_t * e) {
   SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
   
   lv_obj_t* mbox = lv_msgbox_create(lv_layer_top());
+  lv_obj_set_width(mbox, LV_PCT(90));
   lv_msgbox_add_title(mbox, "Brightness");
   lv_msgbox_add_close_button(mbox);
   
   lv_obj_t* slider = lv_slider_create(mbox);
-  lv_obj_set_width(slider, 180);
+  lv_obj_set_width(slider, LV_PCT(100));
   lv_obj_set_style_margin_top(slider, 20, 0);
+  lv_obj_set_style_margin_bottom(slider, 20, 0);
   lv_slider_set_range(slider, 10, 255);
   lv_slider_set_value(slider, Settings.brightness, LV_ANIM_OFF);
   lv_obj_add_event_cb(slider, brightness_event_cb, LV_EVENT_VALUE_CHANGED, ui);
+  lv_obj_center(mbox);
 }
 
 void SettingsUI::brightness_event_cb(lv_event_t * e) {

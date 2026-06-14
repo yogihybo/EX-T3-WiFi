@@ -106,15 +106,18 @@ void ThrottleServer::begin() {
   on("^(?:\\/\\$)?\\/(?:(?:locos|fns|icons)\\/.+|groups)\\.(?:json|bmp)$", HTTP_GET, [](AsyncWebServerRequest* request) {
     fs::FS& fs = Settings.getFS();
 
-    if (request->url().endsWith(".bmp")) { // Bit hacky but allows us to use the built in ETag and Cache-Control code
-      AsyncStaticWebHandler* handler;
-      if (request->url().startsWith("/$/")) {
-        handler = new AsyncStaticWebHandler(request->url().c_str(), fs, request->url().c_str() + 2, "max-age=604800");
-      } else {
-        handler = new AsyncStaticWebHandler("", fs, "", "max-age=604800");
+    if (request->url().endsWith(".bmp")) {
+      String path = request->url();
+      if (path.startsWith("/$/")) {
+        path = path.substring(2);
       }
-      handler->canHandle(request);
-      handler->handleRequest(request);
+      if (fs.exists(path)) {
+        AsyncWebServerResponse *response = request->beginResponse(fs, path, "image/bmp");
+        response->addHeader("Cache-Control", "max-age=604800");
+        request->send(response);
+      } else {
+        request->send(404);
+      }
     } else {
       if (fs.exists(request->url())) {
         request->send(fs, request->url());

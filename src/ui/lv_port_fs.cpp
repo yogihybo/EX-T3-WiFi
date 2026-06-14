@@ -10,8 +10,10 @@ static void * fs_open(lv_fs_drv_t * drv, const char * path, lv_fs_mode_t mode) {
     else if(mode == LV_FS_MODE_RD) flags = FILE_READ;
     else if(mode == (LV_FS_MODE_WR | LV_FS_MODE_RD)) flags = FILE_WRITE;
     
-    String fullPath = "/";
-    fullPath += path;
+    String fullPath = path;
+    if (!fullPath.startsWith("/")) {
+        fullPath = "/" + fullPath;
+    }
     
     File* f = new File(fs.open(fullPath, flags));
     if(!*f) {
@@ -30,13 +32,15 @@ static lv_fs_res_t fs_close(lv_fs_drv_t * drv, void * file_p) {
 
 static lv_fs_res_t fs_read(lv_fs_drv_t * drv, void * file_p, void * buf, uint32_t btr, uint32_t * br) {
     File* f = (File*)file_p;
-    *br = f->read((uint8_t*)buf, btr);
+    size_t read_bytes = f->read((uint8_t*)buf, btr);
+    if (br != NULL) *br = read_bytes;
     return LV_FS_RES_OK;
 }
 
 static lv_fs_res_t fs_write(lv_fs_drv_t * drv, void * file_p, const void * buf, uint32_t btw, uint32_t * bw) {
     File* f = (File*)file_p;
-    *bw = f->write((const uint8_t*)buf, btw);
+    size_t written = f->write((const uint8_t*)buf, btw);
+    if (bw != NULL) *bw = written;
     return LV_FS_RES_OK;
 }
 
