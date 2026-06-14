@@ -91,12 +91,7 @@ void ThrottleServer::begin() {
         }
       };
 
-      bool useSD = (Settings.storageMode == SettingsClass::StorageMode::SD_CARD) && (SD.cardType() != CARD_NONE);
-      if (useSD) {
-        addItemsFromFS(SD, path);
-      } else {
-        addItemsFromFS(SPIFFS, path);
-      }
+      addItemsFromFS(Settings.getFS(), path);
     }
 
     response->setLength();
@@ -104,14 +99,12 @@ void ThrottleServer::begin() {
   });
 
   on("^\\/locos\\/.+\\.json$", HTTP_HEAD, [](AsyncWebServerRequest* request) {
-    bool useSD = (Settings.storageMode == SettingsClass::StorageMode::SD_CARD) && (SD.cardType() != CARD_NONE);
-    bool exists = useSD ? SD.exists(request->url()) : SPIFFS.exists(request->url());
+    bool exists = Settings.getFS().exists(request->url());
     request->send(exists ? 204 : 404);
   });
 
   on("^(?:\\/\\$)?\\/(?:(?:locos|fns|icons)\\/.+|groups)\\.(?:json|bmp)$", HTTP_GET, [](AsyncWebServerRequest* request) {
-    bool useSD = (Settings.storageMode == SettingsClass::StorageMode::SD_CARD) && (SD.cardType() != CARD_NONE);
-    fs::FS& fs = useSD ? (fs::FS&)SD : (fs::FS&)SPIFFS;
+    fs::FS& fs = Settings.getFS();
 
     if (request->url().endsWith(".bmp")) { // Bit hacky but allows us to use the built in ETag and Cache-Control code
       AsyncStaticWebHandler* handler;
@@ -132,8 +125,7 @@ void ThrottleServer::begin() {
   });
 
   on("^\\/(?:locos|fns|icons)\\/.+\\.(?:json|bmp)$", HTTP_DELETE, [](AsyncWebServerRequest* request) {
-    bool useSD = (Settings.storageMode == SettingsClass::StorageMode::SD_CARD) && (SD.cardType() != CARD_NONE);
-    fs::FS& fs = useSD ? (fs::FS&)SD : (fs::FS&)SPIFFS;
+    fs::FS& fs = Settings.getFS();
     bool success = false;
     if (fs.exists(request->url())) {
       success = fs.remove(request->url());
@@ -145,12 +137,7 @@ void ThrottleServer::begin() {
 
   }, NULL, [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
     if (!request->_tempFile) {
-      bool useSD = (Settings.storageMode == SettingsClass::StorageMode::SD_CARD) && (SD.cardType() != CARD_NONE);
-      if (useSD) {
-        request->_tempFile = SD.open(request->url(), "w", true);
-      } else {
-        request->_tempFile = SPIFFS.open(request->url(), "w", true);
-      }
+      request->_tempFile = Settings.getFS().open(request->url(), "w", true);
     }
 
     request->_tempFile.write(data, len);

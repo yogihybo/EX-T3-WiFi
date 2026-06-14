@@ -31,10 +31,10 @@ DCCExCS::Power power;
 Locos locos;
 ThrottleServer throttleServer;
 
-LocoUI* locoUI;
-AccessoriesUI* accUI;
-PowerUI* pwrUI;
-SettingsUI* setUI_ptr;
+std::unique_ptr<LocoUI> locoUI;
+std::unique_ptr<AccessoriesUI> accUI;
+std::unique_ptr<PowerUI> pwrUI;
+std::unique_ptr<SettingsUI> setUI_ptr;
 
 void keepWiFiAlive(void *) {
   for (;;) {
@@ -69,7 +69,7 @@ void powerCheck(void *) {
       delay(100);
     }
 
-    float voltage = total / 10;
+    float voltage = total / 10.0f;
     voltage *= 2;
     voltage /= 1000;
 
@@ -98,10 +98,10 @@ void setup() {
 
   setup_lvgl_layouts();
 
-  locoUI = new LocoUI(dccExCS, locos, loco_tab);
-  accUI = new AccessoriesUI(dccExCS, acc_tab);
-  pwrUI = new PowerUI(dccExCS, power, pwr_tab);
-  setUI_ptr = new SettingsUI(dccExCS, set_tab);
+  locoUI = std::make_unique<LocoUI>(dccExCS, locos, loco_tab);
+  accUI = std::make_unique<AccessoriesUI>(dccExCS, acc_tab);
+  pwrUI = std::make_unique<PowerUI>(dccExCS, power, pwr_tab);
+  setUI_ptr = std::make_unique<SettingsUI>(dccExCS, set_tab);
 
   // Load the settings
   Settings.load();
@@ -170,7 +170,9 @@ void setup() {
         csBuffer[csBufferLen] = '\0';
         dccExCS.handleCS(csBuffer, csBufferLen);
       } else {
-        csBuffer[csBufferLen++] = static_cast<uint8_t *>(data)[i];
+        if (csBufferLen < sizeof(csBuffer) - 1) {
+          csBuffer[csBufferLen++] = static_cast<uint8_t *>(data)[i];
+        }
       }
     }
   });

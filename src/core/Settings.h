@@ -9,6 +9,7 @@
 #endif
 #include <IPAddress.h>
 #include <ArduinoJson.h>
+#include <FS.h>
 
 class SettingsClass : public Events {
   public:
@@ -33,6 +34,8 @@ class SettingsClass : public Events {
     uint8_t brightness = 255;
     uint32_t pin = 0;
     uint16_t emergencyStop = 2000;
+
+    fs::FS& getFS() const;
 
     void load();
     void save();

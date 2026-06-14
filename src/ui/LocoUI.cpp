@@ -125,8 +125,7 @@ void LocoUI::buildControlScreen() {
     char path[32];
     sprintf(path, "/locos/%d.json", _loco.address);
     
-    bool useSD = (Settings.storageMode == SettingsClass::StorageMode::SD_CARD) && (SD.cardType() != CARD_NONE);
-    fs::FS& fs = useSD ? (fs::FS&)SD : (fs::FS&)SPIFFS;
+    fs::FS& fs = Settings.getFS();
 
     if (fs.exists(path)) {
         File locoFile = fs.open(path);
@@ -246,8 +245,7 @@ void LocoUI::buildFunctionButtons() {
         _locoFunctions = _locoDoc["functions"].as<JsonArray>();
     } else {
         File functionFile;
-        bool useSD = (Settings.storageMode == SettingsClass::StorageMode::SD_CARD) && (SD.cardType() != CARD_NONE);
-        fs::FS& fs = useSD ? (fs::FS&)SD : (fs::FS&)SPIFFS;
+        fs::FS& fs = Settings.getFS();
         
         if (_locoDoc.containsKey("functions")) {
             const char* fnPath = _locoDoc["functions"].as<const char*>();
@@ -477,7 +475,7 @@ void LocoUI::name_btn_event_cb(lv_event_t * e) {
                     
                     StaticJsonDocument<16> filterDoc;
                     filterDoc["name"] = true;
-                    StaticJsonDocument<64> locoDoc;
+                    StaticJsonDocument<256> locoDoc;
                     deserializeJson(locoDoc, file, DeserializationOption::Filter(filterDoc));
                     
                     String nameStr = "#";
@@ -501,9 +499,7 @@ void LocoUI::name_btn_event_cb(lv_event_t * e) {
         }
     };
 
-    bool useSD = (Settings.storageMode == SettingsClass::StorageMode::SD_CARD) && (SD.cardType() != CARD_NONE);
-    if (useSD) addLocos(SD);
-    else addLocos(SPIFFS);
+    addLocos(Settings.getFS());
 }
 
 void LocoUI::loco_selected_event_cb(lv_event_t * e) {
@@ -573,8 +569,7 @@ void LocoUI::group_btn_event_cb(lv_event_t * e) {
     lv_obj_set_style_pad_all(list, 5, 0);
     lv_obj_set_style_border_width(list, 0, 0);
 
-    bool useSD = (Settings.storageMode == SettingsClass::StorageMode::SD_CARD) && (SD.cardType() != CARD_NONE);
-    fs::FS& fs = useSD ? (fs::FS&)SD : (fs::FS&)SPIFFS;
+    fs::FS& fs = Settings.getFS();
 
     if (fs.exists("/groups.json")) {
         File groupsFile = fs.open("/groups.json");
@@ -621,8 +616,7 @@ void LocoUI::group_selected_event_cb(lv_event_t * e) {
         lv_obj_t* title = lv_obj_get_child(title_row, 0);
         lv_label_set_text_fmt(title, "Group: %s", group["name"] | "Unknown");
 
-        bool useSD = (Settings.storageMode == SettingsClass::StorageMode::SD_CARD) && (SD.cardType() != CARD_NONE);
-        fs::FS& fs = useSD ? (fs::FS&)SD : (fs::FS&)SPIFFS;
+        fs::FS& fs = Settings.getFS();
 
         for (uint16_t address : locos) {
             char path[32];
@@ -635,7 +629,7 @@ void LocoUI::group_selected_event_cb(lv_event_t * e) {
             if (fs.exists(path)) {
                 StaticJsonDocument<16> filterDoc;
                 filterDoc["name"] = true;
-                StaticJsonDocument<64> locoDoc;
+                StaticJsonDocument<256> locoDoc;
                 File locoFile = fs.open(path);
                 deserializeJson(locoDoc, locoFile, DeserializationOption::Filter(filterDoc));
                 locoFile.close();
