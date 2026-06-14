@@ -279,28 +279,32 @@ void LocoUI::buildFunctionButtons() {
             if (_loco.functions.test(func)) lv_obj_add_state(btn, LV_STATE_CHECKED);
 
             if (icon && strlen(icon) > 0) {
-                lv_obj_t* img = lv_image_create(btn);
-                // The icon is stored as "/icons/something.bmp", so we prepend the S: drive letter
-                String iconPath = "S:";
-                iconPath += icon;
-                // lv_image_set_src requires a string that lives as long as the image.
-                // We must allocate it or since we are reading it from file, LVGL creates a copy?
-                // Wait, LVGL in v9 requires a permanent buffer for the path string if passed as const char*.
-                // To be safe, we should allocate memory for the path and attach it as user_data.
-                // Or better, since `String` goes out of scope, use malloc or a static buffer?
-                // `icon` pointer from ArduinoJson is valid as long as `_locoDoc` is valid!
-                // So we can format the string using an allocated buffer.
-                char* pathBuf = (char*)malloc(strlen(icon) + 3);
-                strcpy(pathBuf, "S:");
-                strcat(pathBuf, icon);
-                lv_image_set_src(img, pathBuf);
-                lv_obj_center(img);
+                String fsPath = "";
+                if (icon[0] != '/') fsPath += "/icons/";
+                fsPath += icon;
+                if (!fsPath.endsWith(".bmp")) fsPath += ".bmp";
+                String fullIconPath = "S:" + fsPath;
                 
-                // Add an event to free the memory when the button is deleted
-                lv_obj_add_event_cb(img, [](lv_event_t* e) {
-                    char* buf = (char*)lv_event_get_user_data(e);
-                    if (buf) free(buf);
-                }, LV_EVENT_DELETE, pathBuf);
+                if (Settings.getFS().exists(fsPath)) {
+                    lv_obj_t* img = lv_image_create(btn);
+                    char* pathBuf = (char*)malloc(fullIconPath.length() + 1);
+                    strcpy(pathBuf, fullIconPath.c_str());
+                    lv_image_set_src(img, pathBuf);
+                    lv_obj_center(img);
+                    
+                    lv_obj_add_event_cb(img, [](lv_event_t* e) {
+                        char* buf = (char*)lv_event_get_user_data(e);
+                        if (buf) free(buf);
+                    }, LV_EVENT_DELETE, pathBuf);
+                } else {
+                    lv_obj_t* lbl = lv_label_create(btn);
+                    if (label && strlen(label) > 0) {
+                        lv_label_set_text(lbl, label); 
+                    } else {
+                        lv_label_set_text_fmt(lbl, "F%d", func);
+                    }
+                    lv_obj_center(lbl);
+                }
             } else {
                 lv_obj_t* lbl = lv_label_create(btn);
                 if (label && strlen(label) > 0) {
