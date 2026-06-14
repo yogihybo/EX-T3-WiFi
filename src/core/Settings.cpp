@@ -1,10 +1,10 @@
 #include <Settings.h>
-#include <SPIFFS.h>
+#include <FileSystems.h>
 #include <SD.h>
 #include <Functions.h>
 
 void SettingsClass::load() {
-  File json = SPIFFS.open("/settings.json");
+  File json = ConfigFS.open("/settings.json");
   StaticJsonDocument<2048> doc;
   DeserializationError error = deserializeJson(doc, json);
 
@@ -50,7 +50,7 @@ void SettingsClass::save() {
   CS.save(doc["cs"] | doc.createNestedObject("cs"));
   LocoUI.save(doc["locoui"] | doc.createNestedObject("locoui"));
   
-  File json = SPIFFS.open("/settings.json", FILE_WRITE);
+  File json = ConfigFS.open("/settings.json", FILE_WRITE);
   serializeJson(doc, json);
   json.close();
 }
@@ -61,7 +61,7 @@ void SettingsClass::init() {
   if (SD.cardType() != CARD_NONE) {
     storageMode = StorageMode::SD_CARD;
   } else {
-    storageMode = StorageMode::SPIFFS;
+    storageMode = StorageMode::LITTLEFS;
   }
 
   // Generate ap ssid and password
@@ -196,5 +196,5 @@ fs::FS& SettingsClass::getFS() const {
   if (storageMode == StorageMode::SD_CARD && SD.cardType() != CARD_NONE) {
     return (fs::FS&)SD;
   }
-  return (fs::FS&)SPIFFS;
+  return (fs::FS&)ConfigFS;
 }

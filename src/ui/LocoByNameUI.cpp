@@ -1,5 +1,5 @@
 #include <LocoByNameUI.h>
-#include <SPIFFS.h>
+#include <FileSystems.h>
 #include <SD.h>
 #include <StreamUtils.h>
 #include <Functions.h>
@@ -12,8 +12,8 @@ LocoByNameUI::LocoByNameUI(bool groups) {
   addElement<Header>(0, 40, 320, 18, "Select Loco");
 
   if (groups) { // Load by groups
-    if (SPIFFS.exists("/groups.json")) {
-      File groupsFile = SPIFFS.open("/groups.json");
+    if (ConfigFS.exists("/groups.json")) {
+      File groupsFile = ConfigFS.open("/groups.json");
       ReadBufferingStream bufferedFile(groupsFile, _doc.capacity());
       deserializeJson(_doc, bufferedFile);
       groupsFile.close();
@@ -28,9 +28,9 @@ LocoByNameUI::LocoByNameUI(bool groups) {
   } else { // Enum locos directory
     _btnsDoc = _doc.to<JsonArray>();
     
-    // Read from SPIFFS
-    if (SPIFFS.exists("/locos")) {
-      File locoDir = SPIFFS.open("/locos");
+    // Read from ConfigFS
+    if (ConfigFS.exists("/locos")) {
+      File locoDir = ConfigFS.open("/locos");
       File locoFile;
 
       while ((locoFile = locoDir.openNextFile())) {
@@ -137,8 +137,8 @@ void LocoByNameUI::loadGroup(JsonArrayConst locos) {
   for (uint16_t address : locos) {
     char path[32];
     sprintf(path, "/locos/%d.json", address);
-    if (SPIFFS.exists(path)) {
-      File loco = SPIFFS.open(path);
+    if (ConfigFS.exists(path)) {
+      File loco = ConfigFS.open(path);
       addLoco(loco);
       loco.close();
     } else if (SD.exists(path)) {

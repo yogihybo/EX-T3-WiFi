@@ -134,7 +134,7 @@ void SettingsUI::rotation_event_cb(lv_event_t * e) {
 #if 0 // SD Card unsupported on CYD hardware due to SPI conflict
 void SettingsUI::storage_mode_event_cb(lv_event_t * e) {
   SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
-  Settings.storageMode = Settings.storageMode == SettingsClass::StorageMode::SD_CARD ? SettingsClass::StorageMode::SPIFFS : SettingsClass::StorageMode::SD_CARD;
+  Settings.storageMode = Settings.storageMode == SettingsClass::StorageMode::SD_CARD ? SettingsClass::StorageMode::LITTLEFS : SettingsClass::StorageMode::SD_CARD;
   lv_label_set_text_fmt(ui->_storageModeLbl, "Storage: %s", Settings.storageMode == SettingsClass::StorageMode::SD_CARD ? "SD Card" : "Internal");
 }
 

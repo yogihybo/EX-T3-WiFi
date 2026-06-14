@@ -1,11 +1,12 @@
 #include <UIHeader.h>
+#include <FileSystems.h>
 
 UIHeader::UIHeader() {
-  _power = addElement<Image>(0, (2 * TFT_HEIGHT) / 480, (60 * TFT_WIDTH) / 320, (30 * TFT_HEIGHT) / 480, SPIFFS);
-  _wifi = addElement<Image>((70 * TFT_WIDTH) / 320, 0, (30 * TFT_WIDTH) / 320, (30 * TFT_HEIGHT) / 480, SPIFFS);
-  _cs = addElement<Image>((110 * TFT_WIDTH) / 320, 0, (30 * TFT_WIDTH) / 320, (30 * TFT_HEIGHT) / 480, SPIFFS);
+  _power = addElement<Image>(0, (2 * TFT_HEIGHT) / 480, (60 * TFT_WIDTH) / 320, (30 * TFT_HEIGHT) / 480, WebsiteFS);
+  _wifi = addElement<Image>((70 * TFT_WIDTH) / 320, 0, (30 * TFT_WIDTH) / 320, (30 * TFT_HEIGHT) / 480, WebsiteFS);
+  _cs = addElement<Image>((110 * TFT_WIDTH) / 320, 0, (30 * TFT_WIDTH) / 320, (30 * TFT_HEIGHT) / 480, WebsiteFS);
 
-  addElement<Image>((150 * TFT_WIDTH) / 320, 0, (30 * TFT_WIDTH) / 320, (30 * TFT_HEIGHT) / 480, "/header/conductor.bmp", SPIFFS);
+  addElement<Image>((150 * TFT_WIDTH) / 320, 0, (30 * TFT_WIDTH) / 320, (30 * TFT_HEIGHT) / 480, "/header/conductor.bmp", WebsiteFS);
   _locos = addElement<Label>((180 * TFT_WIDTH) / 320, (10 * TFT_HEIGHT) / 480, (100 * TFT_WIDTH) / 320, (18 * TFT_HEIGHT) / 480);
 
   updatePowerStatus();
@@ -15,7 +16,7 @@ UIHeader::UIHeader() {
 
   addElement<Button>((290 * TFT_WIDTH) / 320, 0, (30 * TFT_WIDTH) / 320, (30 * TFT_HEIGHT) / 480, Button::Appearance {
     "/header/menu.bmp",
-    SPIFFS
+    WebsiteFS
   })->onRelease([this](void*) {
     dispatchEvent(Event::MENU);
   });
