@@ -283,9 +283,15 @@ void LocoUI::buildFunctionButtons() {
                 if (icon[0] != '/') fsPath += "/icons/";
                 fsPath += icon;
                 if (!fsPath.endsWith(".bmp")) fsPath += ".bmp";
-                String fullIconPath = "S:" + fsPath;
                 
-                if (Settings.getFS().exists(fsPath)) {
+                String fullIconPath = "";
+                if (WebsiteFS.exists(fsPath)) {
+                    fullIconPath = "W:" + fsPath;
+                } else if (Settings.getFS().exists(fsPath)) {
+                    fullIconPath = "S:" + fsPath;
+                }
+                
+                if (fullIconPath.length() > 0) {
                     lv_obj_t* img = lv_image_create(btn);
                     char* pathBuf = (char*)malloc(fullIconPath.length() + 1);
                     strcpy(pathBuf, fullIconPath.c_str());
