@@ -55,10 +55,12 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMAGE_DCC_ICO
 };
 
 const lv_image_dsc_t dcc_icon = {
-  .header.cf = LV_COLOR_FORMAT_RGB565,
   .header.magic = LV_IMAGE_HEADER_MAGIC,
+  .header.cf = LV_COLOR_FORMAT_A8,
+  .header.flags = 0,
   .header.w = 30,
   .header.h = 30,
-  .data_size = 900 * 2,
+  .header.stride = 30,
+  .data_size = 900,
   .data = dcc_icon_map,
 };

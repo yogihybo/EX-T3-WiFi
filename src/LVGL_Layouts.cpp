@@ -56,6 +56,7 @@ void setup_lvgl_layouts() {
 
     cs_icon = lv_image_create(header_bar);
     lv_image_set_src(cs_icon, &dcc_icon);
+    lv_image_set_scale(cs_icon, 180); // scale down to ~70% size
     lv_obj_set_style_image_recolor_opa(cs_icon, LV_OPA_COVER, 0);
     lv_obj_set_style_image_recolor(cs_icon, lv_color_make(255, 0, 0), 0);
 
