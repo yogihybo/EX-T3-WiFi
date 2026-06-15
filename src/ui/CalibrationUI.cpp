@@ -21,6 +21,8 @@ void CalibrationUI::show() {
     // Create full screen overlay
     _container = lv_obj_create(lv_layer_top());
     lv_obj_set_size(_container, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_style_pad_all(_container, 0, 0);
+    lv_obj_set_style_border_width(_container, 0, 0);
     lv_obj_set_style_bg_color(_container, lv_color_make(0, 0, 0), 0);
     lv_obj_set_style_bg_opa(_container, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(_container, 0, 0);
@@ -94,23 +96,50 @@ void CalibrationUI::processTouch() {
         }
     } else if (_state == 3) { // Wait for Final Release
         if (!isTouched) {
-            // Both points recorded! Calculate bounds.
-            // Target 1 was at cx=10, cy=10
-            // Target 2 was at cx=230, cy=310
-            // dx = 220, dy = 300
+            // Extrapolate bounds based on universal orientation mapping.
+            // 1. Get current display rotation
+            lv_disp_t * display = lv_disp_get_default();
+            lv_display_rotation_t rotation = lv_display_get_rotation(display);
 
-            // p.x mapped to 239..0
-            // p.y mapped to 0..319
+            // 2. Define UI coordinates of the button centers
+            int ui_x1 = 30, ui_y1 = 30;
+            int ui_x2 = lv_obj_get_width(_container) - 30;
+            int ui_y2 = lv_obj_get_height(_container) - 30;
 
-            // Calculate xMin (maps to 239) and xMax (maps to 0)
-            int dx_raw = _rx2 - _rx1;
-            int xMax = _rx1 - 10 * dx_raw / 220;
-            int xMin = _rx2 + 9 * dx_raw / 220;
+            // 3. Map UI coordinates to Physical touch coordinates (0-239, 0-319)
+            // LVGL 9 rotates touch input internally. We reverse that rotation to find 
+            // the expected physical mapping for the buttons.
+            int x_map1, y_map1, x_map2, y_map2;
+            
+            if (rotation == LV_DISPLAY_ROTATION_0) {
+                x_map1 = ui_x1; y_map1 = ui_y1;
+                x_map2 = ui_x2; y_map2 = ui_y2;
+            } else if (rotation == LV_DISPLAY_ROTATION_90) {
+                x_map1 = 240 - ui_y1; y_map1 = ui_x1;
+                x_map2 = 240 - ui_y2; y_map2 = ui_x2;
+            } else if (rotation == LV_DISPLAY_ROTATION_180) {
+                x_map1 = 240 - ui_x1; y_map1 = 320 - ui_y1;
+                x_map2 = 240 - ui_x2; y_map2 = 320 - ui_y2;
+            } else { // LV_DISPLAY_ROTATION_270
+                x_map1 = ui_y1; y_map1 = 320 - ui_x1;
+                x_map2 = ui_y2; y_map2 = 320 - ui_x2;
+            }
 
-            // Calculate yMin (maps to 0) and yMax (maps to 319)
-            int dy_raw = _ry2 - _ry1;
-            int yMin = _ry1 - 10 * dy_raw / 300;
-            int yMax = _ry2 + 9 * dy_raw / 300;
+            // 4. Calculate xMin/xMax
+            // main.cpp maps p.x to 239..0 using: map(p.x, xMin, xMax, 239, 0)
+            // This means xMin corresponds to 239, and xMax corresponds to 0.
+            float mx = (float)(_rx2 - _rx1) / (x_map2 - x_map1);
+            float cx = _rx1 - mx * x_map1;
+            int xMin = round(mx * 239 + cx);
+            int xMax = round(mx * 0 + cx);
+
+            // 5. Calculate yMin/yMax
+            // main.cpp maps p.y to 0..319 using: map(p.y, yMin, yMax, 0, 319)
+            // This means yMin corresponds to 0, and yMax corresponds to 319.
+            float my = (float)(_ry2 - _ry1) / (y_map2 - y_map1);
+            float cy = _ry1 - my * y_map1;
+            int yMin = round(my * 0 + cy);
+            int yMax = round(my * 319 + cy);
 
             // Debug Output
             Serial.println("--- Touch Calibration Complete ---");
