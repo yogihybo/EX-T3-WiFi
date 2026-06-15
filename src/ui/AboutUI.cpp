@@ -70,7 +70,10 @@ AboutUI::AboutUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS) {
   }
 
   lv_obj_t* apStat = lv_label_create(content);
-  lv_label_set_text_fmt(apStat, "AP Name: %s\nAP Password: %s", Settings.AP.SSID.c_str(), Settings.AP.password.c_str());
+  lv_label_set_text_fmt(apStat, "Access Point: %s\nAP Name: %s\nAP Password: %s", 
+                        Settings.AP.enabled ? "On" : "Off", 
+                        Settings.AP.SSID.c_str(), 
+                        Settings.AP.password.c_str());
 
   // SD Card Info
   lv_obj_t* sd_title = lv_label_create(content);
