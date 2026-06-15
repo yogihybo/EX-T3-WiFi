@@ -1,4 +1,5 @@
 #include <Events.h>
+#include <algorithm>
 
 uint16_t Events::addEventListener(uint8_t event, const EventCallback&& callback) {
   return _events[event].emplace_back(EventHandler { callback, _count++ }).id;

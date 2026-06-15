@@ -100,31 +100,42 @@ void LocoUI::buildSelectionMenu() {
     lv_obj_add_event_cb(close_btn, close_selection_event_cb, LV_EVENT_CLICKED, this);
 
     lv_obj_t* btn_addr = lv_btn_create(_selectionMenu);
-    lv_obj_set_size(btn_addr, 200, 40);
-    lv_obj_align(btn_addr, LV_ALIGN_TOP_MID, 0, 50);
+    lv_obj_set_size(btn_addr, 200, 35);
+    lv_obj_align(btn_addr, LV_ALIGN_TOP_MID, 0, 45);
     lv_obj_t* lbl_addr = lv_label_create(btn_addr);
     lv_label_set_text(lbl_addr, "By Address");
     lv_obj_center(lbl_addr);
     lv_obj_add_event_cb(btn_addr, addr_btn_event_cb, LV_EVENT_CLICKED, this);
 
     lv_obj_t* btn_name = lv_btn_create(_selectionMenu);
-    lv_obj_set_size(btn_name, 200, 40);
-    lv_obj_align(btn_name, LV_ALIGN_TOP_MID, 0, 100);
+    lv_obj_set_size(btn_name, 200, 35);
+    lv_obj_align(btn_name, LV_ALIGN_TOP_MID, 0, 85);
     lv_obj_t* lbl_name = lv_label_create(btn_name);
     lv_label_set_text(lbl_name, "By Name");
     lv_obj_center(lbl_name);
     lv_obj_add_event_cb(btn_name, name_btn_event_cb, LV_EVENT_CLICKED, this);
 
     lv_obj_t* btn_group = lv_btn_create(_selectionMenu);
-    lv_obj_set_size(btn_group, 200, 40);
-    lv_obj_align(btn_group, LV_ALIGN_TOP_MID, 0, 150);
+    lv_obj_set_size(btn_group, 200, 35);
+    lv_obj_align(btn_group, LV_ALIGN_TOP_MID, 0, 125);
     lv_obj_t* lbl_group = lv_label_create(btn_group);
     lv_label_set_text(lbl_group, "By Group");
     lv_obj_center(lbl_group);
     lv_obj_add_event_cb(btn_group, group_btn_event_cb, LV_EVENT_CLICKED, this);
+
+    lv_obj_t* btn_release = lv_btn_create(_selectionMenu);
+    lv_obj_set_size(btn_release, 200, 35);
+    lv_obj_align(btn_release, LV_ALIGN_TOP_MID, 0, 165);
+    lv_obj_set_style_bg_color(btn_release, lv_color_make(200, 50, 50), 0);
+    lv_obj_t* lbl_release = lv_label_create(btn_release);
+    lv_label_set_text(lbl_release, "Release");
+    lv_obj_center(lbl_release);
+    lv_obj_add_event_cb(btn_release, release_btn_event_cb, LV_EVENT_CLICKED, this);
 }
 
 void LocoUI::buildControlScreen() {
+    _locoDoc.clear();
+
     char path[32];
     sprintf(path, "/locos/%d.json", _loco.address);
     
@@ -460,7 +471,7 @@ void LocoUI::refresh() {
     if (_loco.address == 0) {
         buildControlScreen();
         buildSelectionMenu();
-        lv_obj_clear_flag(_selectionMenu, LV_OBJ_FLAG_HIDDEN);
+        // lv_obj_clear_flag(_selectionMenu, LV_OBJ_FLAG_HIDDEN); // Don't pop up automatically
     } else {
         if (_broadcastLocoHandler == 0xFF) {
             _broadcastLocoHandler = _dccExCS.addEventListener(DCCExCS::Event::BROADCAST_LOCO, [this](void* parameter) {
@@ -719,6 +730,23 @@ void LocoUI::group_selected_event_cb(lv_event_t * e) {
             lv_obj_set_user_data(loco_btn, (void*)(uintptr_t)address);
             lv_obj_add_event_cb(loco_btn, loco_selected_event_cb, LV_EVENT_CLICKED, ui);
         }
+    }
+}
+
+void LocoUI::release_btn_event_cb(lv_event_t * e) {
+    LocoUI* ui = (LocoUI*)lv_event_get_user_data(e);
+    if (ui->_loco.address != 0) {
+        ui->_dccExCS.setLocoThrottle(ui->_loco.address, 0, ui->_loco.direction);
+        ui->_dccExCS.releaseLoco(ui->_loco.address);
+        ui->_locos.remove();
+        
+        if (ui->_selectionMenu) {
+            lv_obj_add_flag(ui->_selectionMenu, LV_OBJ_FLAG_HIDDEN);
+        }
+
+        lv_async_call([](void* user_data) {
+            ((LocoUI*)user_data)->refresh();
+        }, ui);
     }
 }
 
