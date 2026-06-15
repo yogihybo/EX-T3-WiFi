@@ -1,4 +1,12 @@
-# DCC-EX-CYD for Cheap Yellow Display (CYD) ESP32 hardware for use with DCC-EX 
+# DCC-EX-CYD Throttle for Cheap Yellow Display (CYD)
+
+<img width="200" height="208" alt="logo" src="https://github.com/user-attachments/assets/ec05c465-016c-4fdd-a8e6-c6d3c67aa4a7" />
+
+## Overview
+DCC-EX-CYD is port of EX-T3-WiFi that transforms a Cheap Yellow Display (CYD) ESP32-2432S028R into a handheld model railway controller. It communicates asynchronously via WiFi directly to a DCC-EX Command Station. 
+
+The firmware uses **FreeRTOS** and **LVGL 9** to provide a robust and clean UI
+
 
 ![Interface Demo](icons/interface_demo.gif)
 
@@ -11,10 +19,6 @@ The interface is split into four primary tabs anchored to the bottom of the scre
 
 A powerful, touch-enabled WiFi throttle for DCC-EX Command Stations, built natively on **LVGL** for the ESP32 Cheap Yellow Display (CYD).
 
-## Overview
-DCC-EX-CYD is port of EX-T3-WiFi that transforms a Cheap Yellow Display (CYD) ESP32-2432S028R into a handheld model railway controller. It communicates asynchronously via WiFi directly to a DCC-EX Command Station. 
-
-The firmware uses **FreeRTOS** and **LVGL 9** to provide a robust and clean UI
 
 ## Hardware Requirements
 - **ESP32-2432S028R** (Also known as the CYD / Cheap Yellow Display)
