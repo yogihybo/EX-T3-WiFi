@@ -2,9 +2,10 @@
 #include "WiFiUI.h"
 #include "AboutUI.h"
 #include "ProgramUI.h"
+#include "../utils/Screenshot.h"
 #include <SD.h>
 
-SettingsUI::SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), _wifiUI(nullptr), _aboutUI(nullptr), _programUI(nullptr) {
+SettingsUI::SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), _wifiUI(nullptr), _aboutUI(nullptr), _calibrationUI(nullptr), _programUI(nullptr) {
   _container = lv_obj_create(parent);
   lv_obj_set_size(_container, LV_PCT(100), LV_PCT(100));
   lv_obj_align(_container, LV_ALIGN_CENTER, 0, 0);
@@ -58,7 +59,19 @@ SettingsUI::SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), 
   lv_obj_center(_rotationLbl);
   lv_obj_add_event_cb(rotation_btn, rotation_event_cb, LV_EVENT_CLICKED, this);
 
-#if 0 // SD Card unsupported on CYD hardware due to SPI conflict
+  lv_obj_t* cal_btn = lv_btn_create(_container);
+  lv_obj_set_width(cal_btn, LV_PCT(100));
+  lv_obj_t* cal_lbl = lv_label_create(cal_btn);
+  lv_label_set_text(cal_lbl, "Calibrate Touch Screen");
+  lv_obj_center(cal_lbl);
+  lv_obj_add_event_cb(cal_btn, calibrate_event_cb, LV_EVENT_CLICKED, this);
+
+  lv_obj_t* shot_btn = lv_btn_create(_container);
+  lv_obj_set_width(shot_btn, LV_PCT(100));
+  lv_obj_t* shot_lbl = lv_label_create(shot_btn);
+  lv_label_set_text(shot_lbl, "Take Screenshot (3s Delay)");
+  lv_obj_center(shot_lbl);
+  lv_obj_add_event_cb(shot_btn, screenshot_event_cb, LV_EVENT_CLICKED, this);
   lv_obj_t* storage_btn = lv_btn_create(_container);
   lv_obj_set_width(storage_btn, LV_PCT(100));
   _storageModeLbl = lv_label_create(storage_btn);
@@ -72,7 +85,6 @@ SettingsUI::SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), 
   lv_label_set_text(sd_format_lbl, "Format SD Card");
   lv_obj_center(sd_format_lbl);
   lv_obj_add_event_cb(sd_format_btn, sd_format_event_cb, LV_EVENT_CLICKED, this);
-#endif
 
   lv_obj_t* br_btn = lv_btn_create(_container);
   lv_obj_set_width(br_btn, LV_PCT(100));
@@ -131,7 +143,7 @@ void SettingsUI::rotation_event_cb(lv_event_t * e) {
   Settings.dispatchEvent(SettingsClass::Event::ROTATION_CHANGE);
 }
 
-#if 0 // SD Card unsupported on CYD hardware due to SPI conflict
+
 void SettingsUI::storage_mode_event_cb(lv_event_t * e) {
   SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
   Settings.storageMode = Settings.storageMode == SettingsClass::StorageMode::SD_CARD ? SettingsClass::StorageMode::LITTLEFS : SettingsClass::StorageMode::SD_CARD;
@@ -187,7 +199,7 @@ void SettingsUI::sd_format_confirm_event_cb(lv_event_t * e) {
         lv_obj_center(ui->_formatMsgbox);
     }
 }
-#endif
+
 
 void SettingsUI::brightness_btn_event_cb(lv_event_t * e) {
   SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
@@ -240,4 +252,21 @@ void SettingsUI::programming_setup_event_cb(lv_event_t * e) {
       delete ui->_programUI;
   }
   ui->_programUI = new ProgramUI(ui->_dccExCS, lv_layer_top());
+}
+
+void SettingsUI::calibrate_event_cb(lv_event_t * e) {
+  SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
+  if (!ui->_calibrationUI) {
+      ui->_calibrationUI = new CalibrationUI();
+  }
+  ui->_calibrationUI->show();
+}
+
+static void screenshot_timer_cb(lv_timer_t* timer) {
+  lv_timer_del(timer);
+  saveScreenshot("/screenshot.bmp");
+}
+
+void SettingsUI::screenshot_event_cb(lv_event_t * e) {
+  lv_timer_create(screenshot_timer_cb, 3000, nullptr);
 }

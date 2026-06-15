@@ -30,6 +30,14 @@ void SettingsClass::load() {
     AP.load(doc["ap"]);
     CS.load(doc["cs"]);
     LocoUI.load(doc["locoui"]);
+
+    if (doc.containsKey("touchCal")) {
+      JsonObject cal = doc["touchCal"];
+      TouchCal.xMin = cal["xMin"] | TouchCal.xMin;
+      TouchCal.xMax = cal["xMax"] | TouchCal.xMax;
+      TouchCal.yMin = cal["yMin"] | TouchCal.yMin;
+      TouchCal.yMax = cal["yMax"] | TouchCal.yMax;
+    }
   } else {
     init();
   }
@@ -49,6 +57,12 @@ void SettingsClass::save() {
   AP.save(doc["ap"] | doc.createNestedObject("ap"));
   CS.save(doc["cs"] | doc.createNestedObject("cs"));
   LocoUI.save(doc["locoui"] | doc.createNestedObject("locoui"));
+
+  JsonObject cal = doc.createNestedObject("touchCal");
+  cal["xMin"] = TouchCal.xMin;
+  cal["xMax"] = TouchCal.xMax;
+  cal["yMin"] = TouchCal.yMin;
+  cal["yMax"] = TouchCal.yMax;
   
   File json = ConfigFS.open("/settings.json", FILE_WRITE);
   serializeJson(doc, json);

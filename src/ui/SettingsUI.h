@@ -4,6 +4,7 @@
 #include <Settings.h>
 #include <DCCExCS.h>
 #include "LVGL_Layouts.h"
+#include "CalibrationUI.h"
 
 class SettingsUI : public UIView {
   private:
@@ -12,6 +13,7 @@ class SettingsUI : public UIView {
 
     class WiFiUI* _wifiUI;
     class AboutUI* _aboutUI;
+    class CalibrationUI* _calibrationUI;
     class ProgramUI* _programUI;
 
     lv_obj_t* _speedStepLbl;
@@ -32,7 +34,9 @@ class SettingsUI : public UIView {
     static void brightness_event_cb(lv_event_t * e);
     static void wifi_setup_event_cb(lv_event_t * e);
     static void about_event_cb(lv_event_t * e);
+    static void calibrate_event_cb(lv_event_t * e);
     static void programming_setup_event_cb(lv_event_t * e);
+    static void screenshot_event_cb(lv_event_t * e);
 
   public:
     SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent);

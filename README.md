@@ -66,15 +66,19 @@ The project is configured out-of-the-box via `platformio.ini`.
 
 ---
 
-## Known Hardware Limitations (CYD)
+## SD Card & Touch Screen SPI Multiplexing
 
-### SD Card / Touch Screen SPI Conflict
-The ESP32 Cheap Yellow Display (CYD) has a notorious hardware limitation: **The SD Card reader and the Resistive Touch Screen physically share the same SPI hardware controller (VSPI) but are wired to completely different pins.**
-- **Touch Pins**: `CLK=25`, `MISO=39`, `MOSI=32`, `CS=33`
+The ESP32 Cheap Yellow Display (CYD) features a notorious hardware conflict: **The SD Card reader and the Resistive Touch Screen are intended to share the same VSPI hardware controller, but are wired to completely different pins.**
+- **Touch Pins**: `CLK=25`, `MISO=39`, `MOSI=32`, `CS=33`, `IRQ=36`
 - **SD Card Pins**: `CLK=18`, `MISO=19`, `MOSI=23`, `CS=5`
 
-Because the `LVGL_CYD` library initializes the VSPI bus for the touch screen, attempting to mount the SD card via the standard hardware SPI library (`SD.begin()`) will trigger an ESP32 core panic (`addApbChangeCallback duplicate`) or fail to mount because the pins cannot be simultaneously routed to two different configurations without manual multiplexing. 
-For this reason, **SD Card functionality is currently disabled/unsupported** on this specific hardware port to maintain touch stability.
+Standard hardware SPI libraries (`SPI.begin()`) cannot easily multiplex between two radically different pin configurations on the fly without triggering core panics or severely degrading performance.
+
+### The Bit-Bang Workaround
+To resolve this, this project bypasses the default hardware touch drivers included in `LVGL_CYD`. Instead, the touch screen is driven via a custom **Software SPI (Bit-Bang)** implementation based on [TheNitek/XPT2046_Bitbang_Arduino_Library](https://github.com/TheNitek/XPT2046_Bitbang_Arduino_Library). 
+1. **Touch Screen**: Handled entirely in software via standard `digitalRead`/`digitalWrite` pulses. This frees up the hardware VSPI bus completely.
+2. **SD Card**: The SD Card reader is granted exclusive access to the hardware VSPI bus (`SD.begin(5, SPI...)`), allowing for high-speed file transfers, formatting, and directory parsing.
+3. **Calibration**: Touch calibration coordinates are managed programmatically via the `Settings` menu and scaled dynamically, maintaining native LVGL rotation support.
 
 ---
 
