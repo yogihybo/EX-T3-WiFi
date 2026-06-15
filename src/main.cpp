@@ -9,6 +9,7 @@
 #include <Settings.h>
 #include <WiFi.h>
 #include <ThrottleServer.h>
+#include <XPT2046_Bitbang.h>
 
 #include "LVGL_Layouts.h"
 #include "lv_port_fs.h"
@@ -19,6 +20,14 @@
 #include "SettingsUI.h"
 #include "WiFiUI.h"
 #include <memory>
+
+#define MOSI_PIN 32
+#define MISO_PIN 39
+#define CLK_PIN  25
+#define CS_PIN   33
+
+XPT2046_Bitbang touchscreen(MOSI_PIN, MISO_PIN, CLK_PIN, CS_PIN);
+
 
 const uint32_t POWER_CHECK = 60000 * 2; // 2 Minutes
 const uint8_t BATTERY_PIN = 34;

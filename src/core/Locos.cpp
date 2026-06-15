@@ -1,4 +1,5 @@
 #include <Locos.h>
+#include <algorithm>
 
 Locos::Locos() {
   _locos.reserve(50);

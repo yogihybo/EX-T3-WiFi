@@ -59,6 +59,8 @@ class LocoUI : public UIView {
     static void group_btn_event_cb(lv_event_t * e);
     static void group_selected_event_cb(lv_event_t * e);
 
+    static void release_btn_event_cb(lv_event_t * e);
+
     static void nav_btn_event_cb(lv_event_t * e);
     static void dir_btn_event_cb(lv_event_t * e);
     static void speed_arc_event_cb(lv_event_t * e);
