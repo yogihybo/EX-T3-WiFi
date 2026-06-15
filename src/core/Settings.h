@@ -42,6 +42,13 @@ class SettingsClass : public Events {
     uint32_t pin = 0;
     uint16_t emergencyStop = 2000;
 
+    struct TouchCal {
+      int xMin = 200;
+      int xMax = 3750;
+      int yMin = 200;
+      int yMax = 3700;
+    } TouchCal;
+
     fs::FS& getFS() const;
 
     void load();

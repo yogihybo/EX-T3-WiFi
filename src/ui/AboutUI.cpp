@@ -63,7 +63,6 @@ AboutUI::AboutUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS) {
   lv_obj_t* apStat = lv_label_create(_container);
   lv_label_set_text_fmt(apStat, "AP Name: %s\nAP Password: %s", Settings.AP.SSID.c_str(), Settings.AP.password.c_str());
 
-#if 0 // SD Card unsupported on CYD hardware due to SPI conflict
   // SD Card Info
   lv_obj_t* sd_title = lv_label_create(_container);
   lv_label_set_text(sd_title, "SD Card Info");
@@ -71,12 +70,13 @@ AboutUI::AboutUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS) {
   lv_obj_set_style_pad_top(sd_title, 10, 0);
 
   lv_obj_t* sdStat = lv_label_create(_container);
+  _sdStat = sdStat;
   
   uint8_t cardType = SD.cardType();
   if (cardType == CARD_NONE) {
       lv_label_set_text(sdStat, "Status: Not Attached");
   } else {
-      const char* typeStr = "Unknown";
+      const char* typeStr = "UNKNOWN";
       if (cardType == CARD_MMC) typeStr = "MMC";
       else if (cardType == CARD_SD) typeStr = "SDSC";
       else if (cardType == CARD_SDHC) typeStr = "SDHC";
@@ -84,7 +84,6 @@ AboutUI::AboutUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS) {
       uint64_t cardSize = SD.cardSize() / (1024 * 1024);
       lv_label_set_text_fmt(sdStat, "Status: Mounted\nFormat: %s\nCapacity: %llu MB", typeStr, cardSize);
   }
-#endif
 
   _updateTimer = lv_timer_create(update_timer_cb, 2000, this);
 
@@ -131,6 +130,20 @@ void AboutUI::update_timer_cb(lv_timer_t* timer) {
           lv_label_set_text_fmt(ui->_wifiStat, "WiFi: Connected\nIP: %s", WiFi.localIP().toString().c_str());
       } else {
           lv_label_set_text(ui->_wifiStat, "WiFi: Disconnected");
+      }
+      
+      if (ui->_sdStat) {
+          uint8_t cardType = SD.cardType();
+          if (cardType == CARD_NONE) {
+              lv_label_set_text(ui->_sdStat, "Status: Not Attached");
+          } else {
+              const char* typeStr = "UNKNOWN";
+              if (cardType == CARD_MMC) typeStr = "MMC";
+              else if (cardType == CARD_SD) typeStr = "SDSC";
+              else if (cardType == CARD_SDHC) typeStr = "SDHC";
+              uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+              lv_label_set_text_fmt(ui->_sdStat, "Status: Mounted\nFormat: %s\nCapacity: %llu MB", typeStr, cardSize);
+          }
       }
   }
 }

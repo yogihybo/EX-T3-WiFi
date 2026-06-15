@@ -9,7 +9,7 @@
 #include <Settings.h>
 #include <WiFi.h>
 #include <ThrottleServer.h>
-#include <XPT2046_Bitbang.h>
+#include "XPT2046_Bitbang.h"
 
 #include "LVGL_Layouts.h"
 #include "lv_port_fs.h"
@@ -25,8 +25,40 @@
 #define MISO_PIN 39
 #define CLK_PIN  25
 #define CS_PIN   33
+#define IRQ_PIN  36
 
-XPT2046_Bitbang touchscreen(MOSI_PIN, MISO_PIN, CLK_PIN, CS_PIN);
+XPT2046_Bitbang touchscreen(MOSI_PIN, MISO_PIN, CLK_PIN, CS_PIN, IRQ_PIN);
+
+static void touch_read(lv_indev_t * indev, lv_indev_data_t * data) {
+  if (touchscreen.isTouched()) {
+    Point p = touchscreen.getTouch();
+    
+    // Map using calibration data from Settings
+    // p.x (CMD 0x90) maps to the SHORT edge (239-0)
+    int x = map(p.x, Settings.TouchCal.xMin, Settings.TouchCal.xMax, 239, 0);
+    x = constrain(x, 0, 239);
+
+    // p.y (CMD 0xD0) maps to the LONG edge (0-319)
+    int y = map(p.y, Settings.TouchCal.yMin, Settings.TouchCal.yMax, 0, 319);
+    y = constrain(y, 0, 319);
+
+    // Since we are using the bitbang library and bypassing LVGL_CYD's touch driver,
+    // we must replicate LVGL_CYD's specific orientation fix.
+    lv_disp_t * display = lv_disp_get_default();
+    lv_display_rotation_t rotation = lv_display_get_rotation(display);
+    
+    if (rotation == LV_DISPLAY_ROTATION_90 || rotation == LV_DISPLAY_ROTATION_270) {
+      x = 240 - x;
+      y = 320 - y;
+    } 
+
+    data->point.x = x;
+    data->point.y = y;
+    data->state = LV_INDEV_STATE_PRESSED;
+  } else {
+    data->state = LV_INDEV_STATE_RELEASED;
+  }
+}
 
 
 const uint32_t POWER_CHECK = 60000 * 2; // 2 Minutes
@@ -107,6 +139,21 @@ void setup() {
   // Initialize LVGL_CYD framework (handles Display, Touch, Backlight)
   LVGL_CYD::begin(USB_DOWN);
   
+  // Initialize bit-bang touch screen
+  touchscreen.begin();
+
+  // Find the LVGL input device created by LVGL_CYD and overwrite its read_cb
+  // This effectively bypasses LVGL_CYD's hardware SPI touch driver and uses our
+  // bit-banged touch reader instead, freeing up the VSPI hardware for the SD card.
+  lv_indev_t * indev = lv_indev_get_next(NULL);
+  if (indev) {
+    lv_indev_set_read_cb(indev, touch_read);
+  }
+
+  // Initialize the SD card using default VSPI pins
+  SPI.begin(18, 19, 23, 5);
+  SD.begin(5, SPI, 4000000, "/sd", 5, true);
+
   // Initialize LVGL file system driver
   lv_port_fs_init();
 
