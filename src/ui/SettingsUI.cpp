@@ -264,7 +264,19 @@ void SettingsUI::calibrate_event_cb(lv_event_t * e) {
 
 static void screenshot_timer_cb(lv_timer_t* timer) {
   lv_timer_del(timer);
-  saveScreenshot("/screenshot.bmp");
+  bool success = saveScreenshot("/screenshot.bmp");
+  
+  lv_obj_t* mbox = lv_msgbox_create(lv_layer_top());
+  lv_msgbox_add_title(mbox, success ? "Screenshot Saved" : "Screenshot Failed");
+  lv_msgbox_add_text(mbox, success ? "Screenshot saved to /screenshot.bmp" : "Failed to save screenshot. Check SD Card.");
+  
+  lv_obj_t* ok_btn = lv_msgbox_add_footer_button(mbox, "OK");
+  lv_obj_add_event_cb(ok_btn, [](lv_event_t* e) {
+      lv_obj_t* box = (lv_obj_t*)lv_event_get_user_data(e);
+      lv_msgbox_close(box);
+  }, LV_EVENT_CLICKED, mbox);
+  
+  lv_obj_center(mbox);
 }
 
 void SettingsUI::screenshot_event_cb(lv_event_t * e) {

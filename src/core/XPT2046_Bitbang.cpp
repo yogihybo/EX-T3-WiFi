@@ -56,11 +56,36 @@ bool XPT2046_Bitbang::isTouched() {
     return digitalRead(_irqPin) == LOW;
 }
 
+static int16_t besttwoavg(int16_t a, int16_t b, int16_t c) {
+  int16_t dab = abs(a - b);
+  int16_t dbc = abs(b - c);
+  int16_t dca = abs(c - a);
+  if (dab <= dbc && dab <= dca ) return (a + b) / 2;
+  else if (dbc <= dab && dbc <= dca) return (b + c) / 2;
+  else return (a + c) / 2;
+}
+
 Point XPT2046_Bitbang::getTouch() {
-    digitalWrite(_csPin, LOW);
-    int x = readSPI(CMD_READ_X);
-    int y = readSPI(CMD_READ_Y);
-    digitalWrite(_csPin, HIGH);
+    // Helper lambda to perform a single isolated transaction
+    auto getSample = [this]() -> Point {
+        digitalWrite(_csPin, LOW);
+        int x = readSPI(CMD_READ_X);
+        int y = readSPI(CMD_READ_Y);
+        digitalWrite(_csPin, HIGH);
+        return Point{x, y};
+    };
+
+    // Dummy read to wake up the chip and settle the ADC
+    getSample();
+
+    // Take 3 completely independent samples
+    Point p1 = getSample();
+    Point p2 = getSample();
+    Point p3 = getSample();
+
+    // Apply median filter
+    int filteredX = besttwoavg(p1.x, p2.x, p3.x);
+    int filteredY = besttwoavg(p1.y, p2.y, p3.y);
     
-    return Point{x, y};
+    return Point{filteredX, filteredY};
 }

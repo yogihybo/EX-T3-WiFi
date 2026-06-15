@@ -16,16 +16,16 @@ static void write16(File &f, uint16_t val) {
   f.write((val >> 8) & 0xFF);
 }
 
-void saveScreenshot(const char* filename) {
+bool saveScreenshot(const char* filename) {
   if (SD.cardType() == CARD_NONE) {
     Serial.println("Screenshot failed: No SD card attached.");
-    return;
+    return false;
   }
 
   File f = SD.open(filename, FILE_WRITE);
   if (!f) {
     Serial.println("Screenshot failed: Could not open file for writing.");
-    return;
+    return false;
   }
 
   // Get current screen dimensions
@@ -90,4 +90,5 @@ void saveScreenshot(const char* filename) {
 
   f.close();
   Serial.println("Screenshot saved successfully!");
+  return true;
 }
