@@ -270,7 +270,7 @@ void ThrottleServer::begin() {
         }
         Settings.dispatchEvent(SettingsClass::Event::CS_CHANGE);
         vTaskDelete(NULL);
-      }, "cs_save", 4096, nullptr, 1, nullptr);
+      }, "cs_save", 8192, nullptr, 1, nullptr);
     } else { // New settings are invalid so reload
       Settings.load();
       request->send(404);

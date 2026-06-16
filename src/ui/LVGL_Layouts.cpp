@@ -20,15 +20,41 @@ static lv_obj_t* train_img;
 
 #include <Settings.h>
 
+// Custom dark theme override: strips the blue tint from LVGL's default dark palette.
+// Runs AFTER the base theme so only bg/border colors on plain containers are changed.
+static lv_theme_t* custom_dark_theme = nullptr;
+
+static void dark_override_cb(lv_theme_t* th, lv_obj_t* obj) {
+    LV_UNUSED(th);
+    if (!lv_obj_check_type(obj, &lv_obj_class)) return;
+
+    if (lv_obj_get_parent(obj) == NULL) {
+        // Screen — pure near-black
+        lv_obj_set_style_bg_color(obj, lv_color_hex(0x0a0a0a), LV_PART_MAIN | LV_STATE_DEFAULT);
+    } else {
+        // Panel / container — neutral dark grey, no blue tint
+        lv_obj_set_style_bg_color(obj, lv_color_hex(0x1a1a1a), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_border_color(obj, lv_color_hex(0x333333), LV_PART_MAIN | LV_STATE_DEFAULT);
+    }
+}
+
 void apply_theme() {
     bool is_dark = (Settings.theme == SettingsClass::Theme::DARK);
     lv_disp_t * disp = lv_disp_get_default();
-    lv_theme_t * th = lv_theme_default_init(disp, 
+    lv_theme_t * base = lv_theme_default_init(disp,
         lv_color_make(50, 150, 255),  /* Palette primary */
         lv_color_make(255, 50, 50),   /* Palette secondary */
-        is_dark, 
+        is_dark,
         &lv_font_montserrat_14);
-    lv_disp_set_theme(disp, th);
+
+    if (is_dark) {
+        if (!custom_dark_theme) custom_dark_theme = lv_theme_create();
+        lv_theme_set_parent(custom_dark_theme, base);
+        lv_theme_set_apply_cb(custom_dark_theme, dark_override_cb);
+        lv_disp_set_theme(disp, custom_dark_theme);
+    } else {
+        lv_disp_set_theme(disp, base);
+    }
 
     if (train_img) {
         lv_obj_set_style_image_recolor_opa(train_img, LV_OPA_COVER, 0);
