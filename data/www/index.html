@@ -6,6 +6,7 @@
     <link href="/bs.min.css" rel="stylesheet" />
     <link href="/fn.editor.css" rel="stylesheet" />
     <title>DCC-EX-CYD</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230d6efd'/%3E%3Ctext x='8' y='12' text-anchor='middle' font-size='11' font-family='sans-serif' fill='white' font-weight='bold'%3ET%3C/text%3E%3C/svg%3E" />
     <style>
       :root {
         --primary-color: #0d6efd;
@@ -110,14 +111,25 @@
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
       }
 
-      /* Loading */
+      /* Loading — pure CSS spinner, no image file needed */
+      .loading {
+        position: relative;
+        min-height: 64px;
+      }
       .loading:before {
         content: '';
-        height: 64px;
-        background-image: url(/loading.gif);
-        background-repeat: no-repeat;
-        background-position: center;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 36px;
+        height: 36px;
+        margin: -18px 0 0 -18px;
+        border: 4px solid #dee2e6;
+        border-top-color: #0d6efd;
+        border-radius: 50%;
+        animation: spin .75s linear infinite;
       }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
