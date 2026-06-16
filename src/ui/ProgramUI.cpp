@@ -29,29 +29,52 @@ ProgramUI::ProgramUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), _m
   lv_obj_center(close_lbl);
   lv_obj_add_event_cb(close_btn, close_btn_event_cb, LV_EVENT_CLICKED, this);
 
-  // Content area for buttons
+  // Content area — column of rows, each row holds a Read/Write pair (or 3 ACK buttons)
   lv_obj_t* content = lv_obj_create(_container);
   lv_obj_set_width(content, LV_PCT(100));
   lv_obj_set_flex_grow(content, 1);
-  lv_obj_set_flex_flow(content, LV_FLEX_FLOW_ROW_WRAP);
-  lv_obj_set_flex_align(content, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-  lv_obj_set_style_pad_all(content, 10, 0);
+  lv_obj_set_flex_flow(content, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(content, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_all(content, 6, 0);
+  lv_obj_set_style_pad_row(content, 4, 0);
 
-  const char* btn_names[] = {
-    "Read Address", "Write Address",
-    "Read Byte", "Write Byte",
-    "Read Bit", "Write Bit",
-    "ACK Limit", "ACK Min", "ACK Max"
+  struct BtnRow { const char* labels[3]; int ids[3]; int count; };
+  const BtnRow rows[] = {
+    { {"Read\nAddress",  "Write\nAddress", ""}, {0, 1, -1}, 2 },
+    { {"Read\nByte",     "Write\nByte",    ""}, {2, 3, -1}, 2 },
+    { {"Read\nBit",      "Write\nBit",     ""}, {4, 5, -1}, 2 },
+    { {"ACK\nLimit",     "ACK\nMin", "ACK\nMax"}, {6, 7, 8}, 3 },
   };
 
-  for(int i = 0; i < 9; i++) {
-    lv_obj_t* btn = lv_btn_create(content);
-    lv_obj_set_width(btn, 140); // Two columns, auto height
-    lv_obj_t* lbl = lv_label_create(btn);
-    lv_label_set_text(lbl, btn_names[i]);
-    lv_obj_center(lbl);
-    lv_obj_set_user_data(btn, (void*)(uintptr_t)i);
-    lv_obj_add_event_cb(btn, menu_btn_event_cb, LV_EVENT_CLICKED, this);
+  for (const auto& row : rows) {
+    lv_obj_t* rowObj = lv_obj_create(content);
+    lv_obj_set_width(rowObj, LV_PCT(100));
+    lv_obj_set_height(rowObj, 44);
+    lv_obj_set_flex_flow(rowObj, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(rowObj, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(rowObj, 0, 0);
+    lv_obj_set_style_pad_column(rowObj, 4, 0);
+    lv_obj_set_style_border_width(rowObj, 0, 0);
+    lv_obj_set_style_bg_opa(rowObj, 0, 0);
+    lv_obj_clear_flag(rowObj, LV_OBJ_FLAG_SCROLLABLE);
+
+    for (int i = 0; i < row.count; i++) {
+      lv_obj_t* btn = lv_btn_create(rowObj);
+      lv_obj_set_flex_grow(btn, 1);
+      lv_obj_set_height(btn, LV_PCT(100));
+      lv_obj_set_style_pad_all(btn, 4, 0);
+
+      lv_obj_t* lbl = lv_label_create(btn);
+      lv_label_set_text(lbl, row.labels[i]);
+      lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
+      lv_obj_set_width(lbl, LV_PCT(100));
+      lv_obj_set_style_text_font(lbl, &lv_font_montserrat_12, 0);
+      lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
+      lv_obj_center(lbl);
+
+      lv_obj_set_user_data(btn, (void*)(uintptr_t)row.ids[i]);
+      lv_obj_add_event_cb(btn, menu_btn_event_cb, LV_EVENT_CLICKED, this);
+    }
   }
 
   // DCC Event Listeners
