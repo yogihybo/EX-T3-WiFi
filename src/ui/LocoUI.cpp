@@ -159,7 +159,7 @@ void LocoUI::buildControlScreen() {
     // Prev / Next — semi-transparent pill so they read as tappable
     lv_obj_t* prev_btn = lv_btn_create(_container);
     lv_obj_set_size(prev_btn, 40, 40);
-    lv_obj_align(prev_btn, LV_ALIGN_TOP_LEFT, -4, 14);
+    lv_obj_align(prev_btn, LV_ALIGN_TOP_LEFT, 3, 14); // centre circle over left fn column (col centre x=23, circle half=20)
     lv_obj_set_style_bg_opa(prev_btn, LV_OPA_20, 0);
     lv_obj_set_style_bg_color(prev_btn, lv_color_hex(0xffffff), 0);
     lv_obj_set_style_shadow_width(prev_btn, 0, 0);
@@ -192,7 +192,7 @@ void LocoUI::buildControlScreen() {
 
     lv_obj_t* next_btn = lv_btn_create(_container);
     lv_obj_set_size(next_btn, 40, 40);
-    lv_obj_align(next_btn, LV_ALIGN_TOP_RIGHT, 4, 14);
+    lv_obj_align(next_btn, LV_ALIGN_TOP_RIGHT, -3, 14); // centre circle over right fn column (col centre x=217, circle half=20 → right edge=237)
     lv_obj_set_style_bg_opa(next_btn, LV_OPA_20, 0);
     lv_obj_set_style_bg_color(next_btn, lv_color_hex(0xffffff), 0);
     lv_obj_set_style_shadow_width(next_btn, 0, 0);
