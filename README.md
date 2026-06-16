@@ -12,7 +12,7 @@ The firmware uses **FreeRTOS** and **LVGL 9** to provide a robust and clean UI
 
 ### 🚂 Navigation & Tabs
 The interface is split into four primary tabs anchored to the bottom of the screen:
-- **Locomotive**: Drive your trains with a touch speedometer, toggle F0-F28 functions, and swap active locos quickly.
+- **Locomotive**: Drive your trains with a touch speedometer, toggle function buttons, and swap active locos quickly.
 - **Accessories**: Fast-access control to toggle layout turnouts and accessories using their DCC address.
 - **Power**: Control and monitor the DCC-EX Command Station track power (Main, Prog, Join).
 - **Settings**: Configure WiFi connections, screen brightness, rotation, touch calibration, and more.
@@ -53,7 +53,7 @@ Replaces the legacy view-swapper with a unified native LVGL container system.
 ### 3. Loco Control (`LocoUI.cpp`)
 The primary dashboard for driving locomotives.
 - **Throttle**: Features an `lv_arc` serving as a dynamic rotary speedometer.
-- **Function Mapping**: Parses `[address].json` files from LittleFS/SD to dynamically generate a dual-column scrolling list of `F0-F28` buttons specific to the active locomotive.
+- **Function Mapping**: Parses `[address].json` files from LittleFS/SD to dynamically generate a scrolling list of function buttons specific to the active locomotive. A default set (F0–F9) is shown for unrecognised locos.
 - **Selection Submenu**: Clicking the active address instantly spawns a hidden overlay popup menu, allowing you to seamlessly swap locomotives via keypad entry.
 - **Direction / E-Stop**: Instant DCC directional toggles and emergency track halts.
 
@@ -66,6 +66,19 @@ Binds natively to incoming `BROADCAST_POWER` events from the Command Station. Fe
 ### 6. Settings & Network Hub (`SettingsUI.cpp`)
 - Controls hardware variables like screen brightness (hooked directly into the CYD backlight driver).
 - **Nested Popups**: Contains heavy-duty sub-modules (`WiFiUI.cpp` and `AboutUI.cpp`) that dynamically popul over the settings UI. `WiFiUI` renders local AP configuration portals or QR codes, while `AboutUI` cleanly tracks live hardware specs and parses Command Station firmware hashes.
+
+---
+
+## Web Interface
+
+The ESP32 serves a Vue 3 web interface over WiFi for managing the throttle configuration without reflashing.
+
+- **Locos**: Add, edit, and delete locomotives by DCC address and name. Assign a default function set (F0–F9), a saved custom set, or define functions inline with the function editor.
+- **Function Sets**: Create reusable function sets with per-button label, colour, latching mode, and icon. Rows can be reordered by drag and drop.
+- **Groups**: Organise locos into named groups for quick selection on the throttle. Groups and their members can be reordered by drag and drop.
+- **Bulk Export / Import**: The Storage settings tab provides a one-click export of all locos, function sets, and groups to a single JSON backup file, and a matching import to restore from it.
+
+All three tabs share a consistent layout: column headers, per-row edit / download / delete actions, and a persistent dashed add button at the bottom of each list.
 
 ---
 
