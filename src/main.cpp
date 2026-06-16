@@ -192,12 +192,12 @@ void setup() {
   lv_obj_center(splash_img);
   
   lv_timer_handler(); // Render splash screen
+
+  lv_obj_del(splash_img); // delete the splash screen
+
   LVGL_CYD::backlight(Settings.brightness); // Fade in / turn on backlight now that the frame is ready
   delay(2000);
   
-  lv_obj_del(splash_img);
-  lv_cache_drop_all(); // Free any cached splash image data before building the main UI
-
   setup_lvgl_layouts();
 
   locoUI = std::make_unique<LocoUI>(dccExCS, locos, loco_tab);
