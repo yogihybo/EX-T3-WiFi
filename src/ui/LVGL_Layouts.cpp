@@ -194,13 +194,15 @@ void set_header_cs_status(bool connected) {
 void set_header_power_status(float voltage) {
     if (power_label) {
         const char* sym = LV_SYMBOL_BATTERY_EMPTY;
-        if (voltage >= 4.10) sym = LV_SYMBOL_BATTERY_FULL;
-        else if (voltage >= 3.90) sym = LV_SYMBOL_BATTERY_3;
-        else if (voltage >= 3.75) sym = LV_SYMBOL_BATTERY_2;
-        else if (voltage >= 3.60) sym = LV_SYMBOL_BATTERY_1;
-        
+        lv_color_t col = lv_color_make(255, 80, 80); // red — critically low
+        if (voltage >= 4.10) { sym = LV_SYMBOL_BATTERY_FULL; col = lv_color_make(80, 220, 80);  }
+        else if (voltage >= 3.90) { sym = LV_SYMBOL_BATTERY_3; col = lv_color_make(150, 220, 80); }
+        else if (voltage >= 3.75) { sym = LV_SYMBOL_BATTERY_2; col = lv_color_make(220, 220, 80); }
+        else if (voltage >= 3.60) { sym = LV_SYMBOL_BATTERY_1; col = lv_color_make(220, 140, 40); }
+
         char buf[16];
         snprintf(buf, sizeof(buf), "%s %.2fV", sym, voltage);
         lv_label_set_text(power_label, buf);
+        lv_obj_set_style_text_color(power_label, col, 0);
     }
 }
