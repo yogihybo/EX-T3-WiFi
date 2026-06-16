@@ -68,7 +68,7 @@ const uint8_t BATTERY_PIN = 34;
 const uint16_t CONNECTION_ALIVE_DELAY = 5000;
 
 AsyncClient csClient;
-uint8_t csBuffer[1024];
+uint8_t csBuffer[256]; // DCC-EX commands are short (<20 bytes typically)
 uint16_t csBufferLen = 0;
 DCCExCS dccExCS(csClient);
 DCCExCS::Power power;
@@ -135,14 +135,17 @@ void apply_rotation() {
 
 void setup() {
   Serial.begin(115200);
+  Serial.printf("\n[Boot] Start: %u bytes free\n", ESP.getFreeHeap());
 
   // Start file systems
   ConfigFS.begin(true, "/config", 10, "config");
   WebsiteFS.begin(true, "/website", 10, "website");
+  Serial.printf("[Boot] After FileSystems: %u bytes free\n", ESP.getFreeHeap());
 
   // Initialize LVGL_CYD framework (handles Display, Touch, Backlight)
   LVGL_CYD::begin(USB_DOWN);
   LVGL_CYD::backlight(0); // Immediately turn off backlight to hide the white startup screen flash
+  Serial.printf("[Boot] After LVGL_CYD: %u bytes free\n", ESP.getFreeHeap());
   
   // Initialize bit-bang touch screen
   touchscreen.begin();
@@ -158,12 +161,14 @@ void setup() {
   // Initialize the SD card using default VSPI pins
   SPI.begin(18, 19, 23, 5);
   SD.begin(5, SPI, 4000000, "/sd", 5, true);
+  Serial.printf("[Boot] After SD.begin: %u bytes free\n", ESP.getFreeHeap());
 
   // Initialize LVGL file system driver
   lv_port_fs_init();
 
   // Load the settings
   Settings.load();
+  Serial.printf("[Boot] After Settings.load: %u bytes free\n", ESP.getFreeHeap());
 
   apply_theme();
   Settings.addEventListener(SettingsClass::Event::THEME_CHANGE, [](void*) {
@@ -191,6 +196,7 @@ void setup() {
   delay(2000);
   
   lv_obj_del(splash_img);
+  lv_cache_drop_all(); // Free any cached splash image data before building the main UI
 
   setup_lvgl_layouts();
 
@@ -198,6 +204,7 @@ void setup() {
   accUI = std::make_unique<AccessoriesUI>(dccExCS, acc_tab);
   pwrUI = std::make_unique<PowerUI>(dccExCS, power, pwr_tab);
   setUI_ptr = std::make_unique<SettingsUI>(dccExCS, set_tab);
+  Serial.printf("[Boot] After UI setup: %u bytes free\n", ESP.getFreeHeap());
 
   // Setup the WiFi
   WiFi.setHostname(Settings.AP.SSID.c_str());
@@ -311,10 +318,11 @@ void setup() {
   Settings.addEventListener(SettingsClass::Event::CS_CHANGE,
                             [](void *) { WiFi.disconnect(); });
 
-  xTaskCreatePinnedToCore(powerCheck, "powerCheck", 4096, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(powerCheck, "powerCheck", 2048, NULL, 1, NULL, 1);
   xTaskCreatePinnedToCore(keepWiFiAlive, "keepWiFiAlive", 2048, NULL, 1, NULL, 1);
 
   throttleServer.begin();
+  Serial.printf("[Boot] After WebServer: %u bytes free (min ever: %u)\n", ESP.getFreeHeap(), ESP.getMinFreeHeap());
 }
 
 void loop() {

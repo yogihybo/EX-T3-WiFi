@@ -10,6 +10,19 @@
 #include <Version.h>
 #include "ui/LVGL_Layouts.h"
 
+class WebLoggerHandler : public AsyncWebHandler {
+public:
+  WebLoggerHandler() {}
+  virtual ~WebLoggerHandler() {}
+
+  bool canHandle(AsyncWebServerRequest *request) const override {
+    Serial.printf("[Web] Incoming: %s %s (Free Heap: %u)\n", request->methodToString(), request->url().c_str(), ESP.getFreeHeap());
+    return false;
+  }
+
+  void handleRequest(AsyncWebServerRequest *request) override {}
+};
+
 ThrottleServer::ThrottleServer() : AsyncWebServer(80) { }
 
 class ThrottleAPIHandler : public AsyncWebHandler {
@@ -42,6 +55,7 @@ public:
 
   void handleRequest(AsyncWebServerRequest *request) override {
     String url = request->url();
+    Serial.printf("[Web] Request: %s %s\n", request->methodToString(), url.c_str());
     if (url.startsWith("/$/")) url = url.substring(2);
 
     if (request->method() == HTTP_GET) {
@@ -106,35 +120,67 @@ public:
         request->send(response);
       } else {
         fs::FS* fsPtr = &Settings.getFS();
-        if (!fsPtr->exists(url) && WebsiteFS.exists(url)) {
-          fsPtr = &WebsiteFS;
+        String fsName = (fsPtr == &SD) ? "SD" : "ConfigFS";
+
+        bool exists = false;
+        if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+          exists = fsPtr->exists(url);
+          if (!exists && WebsiteFS.exists(url)) {
+            fsPtr = &WebsiteFS;
+            fsName = "WebsiteFS";
+            exists = true;
+          }
+          xSemaphoreGive(lvgl_mutex);
         }
+        
+        Serial.printf("[Web] Serving %s from %s\n", url.c_str(), fsName.c_str());
+
         fs::FS& fs = *fsPtr;
 
-        if (url.endsWith(".bmp")) {
-          if (fs.exists(url)) {
-            AsyncWebServerResponse *response = request->beginResponse(fs, url, "image/bmp");
-            response->addHeader("Cache-Control", "max-age=604800");
-            request->send(response);
-          } else {
-            request->send(404);
+        if (exists) {
+          File file;
+          if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+            file = fs.open(url, "r");
+            xSemaphoreGive(lvgl_mutex);
           }
-        } else {
-          if (fs.exists(url)) {
-            request->send(fs, url);
-          } else {
-            request->send(404);
+
+          if (file) {
+            String contentType = url.endsWith(".bmp") ? "image/bmp" : "application/json";
+            size_t fileSize = file.size();
+            
+            AsyncWebServerResponse *response = request->beginResponse(contentType, fileSize, [file](uint8_t *buffer, size_t maxLen, size_t index) mutable -> size_t {
+              if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+                size_t bytesRead = file.read(buffer, maxLen);
+                xSemaphoreGive(lvgl_mutex);
+                return bytesRead;
+              }
+              return 0;
+            });
+            
+            if (url.endsWith(".bmp")) {
+              response->addHeader("Cache-Control", "max-age=604800");
+            }
+            request->send(response);
+            return;
           }
         }
+        request->send(404);
       }
     } else if (request->method() == HTTP_HEAD) {
-      bool exists = Settings.getFS().exists(url);
+      bool exists = false;
+      if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+        exists = Settings.getFS().exists(url);
+        xSemaphoreGive(lvgl_mutex);
+      }
       request->send(exists ? 204 : 404);
     } else if (request->method() == HTTP_DELETE) {
-      fs::FS& fs = Settings.getFS();
       bool success = false;
-      if (fs.exists(url)) {
-        success = fs.remove(url);
+      if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+        fs::FS& fs = Settings.getFS();
+        if (fs.exists(url)) {
+          success = fs.remove(url);
+        }
+        xSemaphoreGive(lvgl_mutex);
       }
       request->send(success ? 204 : 404);
     } else if (request->method() == HTTP_PUT) {
@@ -144,18 +190,27 @@ public:
 
   void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) override {
     if (request->method() == HTTP_PUT) {
-      if (!request->_tempFile) {
-        request->_tempFile = Settings.getFS().open(request->url(), "w", true);
-      }
-      request->_tempFile.write(data, len);
-      if (len + index == total) {
-        request->_tempFile.close();
+      if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
+        if (!request->_tempFile) {
+          request->_tempFile = Settings.getFS().open(request->url(), "w", true);
+        }
+        if (request->_tempFile) {
+          request->_tempFile.write(data, len);
+          if (len + index == total) {
+            request->_tempFile.close();
+          }
+        }
+        xSemaphoreGive(lvgl_mutex);
       }
     }
   }
 };
 
 void ThrottleServer::begin() {
+  // Force browser to use sequential connections instead of parallel ones.
+  // Without this, 4+ simultaneous large file downloads exhaust the lwIP
+  // TCP buffer heap (especially when the SD card is mounted), causing a deadlock.
+  DefaultHeaders::Instance().addHeader("Connection", "close");
 
   on("/cs", HTTP_HEAD, [](AsyncWebServerRequest* request) {
     request->send(Settings.CS.valid() ? 200 : 404);
@@ -296,6 +351,7 @@ void ThrottleServer::begin() {
     }
   }));
 
+  addHandler(new WebLoggerHandler());
   addHandler(new ThrottleAPIHandler());
 
   serveStatic("/", WebsiteFS, "/www/")
