@@ -393,12 +393,8 @@ void setup() {
   }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
   // Acquired loco count change
-  static uint8_t lastLocoCount = 0;
   locos.addEventListener(Locos::Event::COUNT_CHANGE, [](void *parameter) {
     auto count = *static_cast<uint8_t *>(parameter);
-    if (count > lastLocoCount)      Serial.printf("[Loco] Added   – total: %u\n", count);
-    else if (count < lastLocoCount) Serial.printf("[Loco] Removed – total: %u\n", count);
-    lastLocoCount = count;
     if (xTaskGetCurrentTaskHandle() == xSemaphoreGetMutexHolder(lvgl_mutex)) {
         set_header_loco_count(count);
     } else if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
