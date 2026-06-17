@@ -21,6 +21,8 @@ class LocoUI : public UIView {
     } _loco;
 
     Loco* _activeLoco = nullptr;
+    uint32_t _lastLocalSpeedMs = 0;
+    static constexpr uint32_t SPEED_LOCAL_HOLD_MS = 400;
 
     lv_obj_t* _container;
     lv_obj_t* _selectionMenu;

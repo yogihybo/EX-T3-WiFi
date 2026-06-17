@@ -38,6 +38,8 @@ PowerUI::~PowerUI() {
 
 void PowerUI::onPowerUpdate(bool main, bool prog, bool join) {
   _updatingFromBroadcast = true;
+  _mainOn = main;
+  _progOn = prog;
 
   Serial.printf("[DCC] Track power – Main: %s  Prog: %s  Join: %s\n",
       main ? "ON" : "OFF", prog ? "ON" : "OFF", join ? "ON" : "OFF");
@@ -66,13 +68,25 @@ void PowerUI::onIndividualPowerUpdate(TrackPower state, int track) {
   bool on = (state == TrackPower::PowerOn);
   _updatingFromBroadcast = true;
 
-  // track: 2698315=MAIN, 2788330=PROG, 65..72='A'..'H' (see DCCEXProtocol.h comment)
-  if (track == 2698315 && _powerMain) {
-    if (on) lv_obj_add_state(_powerMain, LV_STATE_CHECKED);
-    else    lv_obj_clear_state(_powerMain, LV_STATE_CHECKED);
-  } else if (track == 2788330 && _powerProg) {
-    if (on) lv_obj_add_state(_powerProg, LV_STATE_CHECKED);
-    else    lv_obj_clear_state(_powerProg, LV_STATE_CHECKED);
+  // track: 2698315=MAIN, 2788330=PROG
+  if (track == 2698315) {
+    _mainOn = on;
+    if (_powerMain) {
+      if (on) lv_obj_add_state(_powerMain, LV_STATE_CHECKED);
+      else    lv_obj_clear_state(_powerMain, LV_STATE_CHECKED);
+    }
+  } else if (track == 2788330) {
+    _progOn = on;
+    if (_powerProg) {
+      if (on) lv_obj_add_state(_powerProg, LV_STATE_CHECKED);
+      else    lv_obj_clear_state(_powerProg, LV_STATE_CHECKED);
+    }
+  }
+
+  // Keep All Tracks button in sync with both track states
+  if (_powerAll) {
+    if (_mainOn && _progOn) lv_obj_add_state(_powerAll, LV_STATE_CHECKED);
+    else                    lv_obj_clear_state(_powerAll, LV_STATE_CHECKED);
   }
 
   _updatingFromBroadcast = false;
