@@ -3,9 +3,11 @@
 #include <SD.h>
 #include <Settings.h>
 
-LocoUI::LocoUI(DCCExCS& dccExCS, Locos& locos, lv_obj_t* parent) 
-    : _dccExCS(dccExCS), _locos(locos), _loco((uint16_t)locos), _broadcastLocoHandler(0xFF), _fnPage(0) {
-    
+LocoUI::LocoUI(DCCEXProtocol& dccex, Locos& locos, lv_obj_t* parent)
+    : _dccex(dccex), _locos(locos), _fnPage(0) {
+
+    _loco.address = (uint16_t)locos;
+
     _container = lv_obj_create(parent);
     lv_obj_set_size(_container, LV_PCT(100), LV_PCT(100));
     lv_obj_align(_container, LV_ALIGN_CENTER, 0, 0);
@@ -20,51 +22,58 @@ LocoUI::LocoUI(DCCExCS& dccExCS, Locos& locos, lv_obj_t* parent)
     if (_loco.address == 0) {
         buildControlScreen();
         buildSelectionMenu();
-        // lv_obj_clear_flag(_selectionMenu, LV_OBJ_FLAG_HIDDEN); // Keep hidden so throttle page is default
     } else {
-        _broadcastLocoHandler = _dccExCS.addEventListener(DCCExCS::Event::BROADCAST_LOCO, [this](void* parameter) {
-            if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
-                broadcast(parameter);
-                xSemaphoreGive(lvgl_mutex);
-            }
-        });
         buildControlScreen();
         buildSelectionMenu();
-        _dccExCS.acquireLoco(_loco.address);
+        _activeLoco = new Loco(_loco.address, LocoSourceEntry);
+        _dccex.setThrottle(_activeLoco, 0, Direction::Forward);
         Serial.printf("[DCC] %s (%d) acquired\n", _locoName.c_str(), _loco.address);
     }
 }
 
 LocoUI::~LocoUI() {
-    if (_broadcastLocoHandler != 0xFF) {
-        _dccExCS.removeEventListener(DCCExCS::Event::BROADCAST_LOCO, _broadcastLocoHandler);
+    if (_activeLoco) {
+        delete _activeLoco;
+        _activeLoco = nullptr;
     }
     if (_keyboard) lv_obj_del(_keyboard);
     if (_textarea) lv_obj_del(_textarea);
     if (_container) lv_obj_del(_container);
 }
 
-void LocoUI::broadcast(void* parameter) {
-    auto broadcast = *static_cast<DCCExCS::Loco*>(parameter);
-    if (_loco.address == broadcast.address) {
-        if (_loco.speed != broadcast.speed) {
-            lv_arc_set_value(_speedArc, broadcast.speed);
-            lv_label_set_text_fmt(_speedLabel, "%d", broadcast.speed);
-            
-            lv_color_t color;
-            if (broadcast.speed < 42) color = lv_color_make(50, 255, 50);
-            else if (broadcast.speed < 84) color = lv_color_make(255, 255, 50);
-            else color = lv_color_make(255, 50, 50);
-            lv_obj_set_style_arc_color(_speedArc, color, LV_PART_INDICATOR);
+void LocoUI::onLocoUpdate(Loco* loco) {
+    if (!loco || loco->getAddress() != _loco.address) return;
+
+    int newSpeed = loco->getSpeed();
+    bool newDir = (loco->getDirection() == Direction::Forward);
+
+    if (_loco.speed != newSpeed) {
+        lv_arc_set_value(_speedArc, newSpeed);
+        lv_label_set_text_fmt(_speedLabel, "%d", newSpeed);
+
+        lv_color_t color;
+        if (newSpeed < 42)      color = lv_color_make(50, 255, 50);
+        else if (newSpeed < 84) color = lv_color_make(255, 255, 50);
+        else                    color = lv_color_make(255, 50, 50);
+        lv_obj_set_style_arc_color(_speedArc, color, LV_PART_INDICATOR);
+        _loco.speed = newSpeed;
+    }
+
+    if (_loco.direction != newDir) {
+        lv_label_set_text(_dirLabel, newDir ? LV_SYMBOL_RIGHT " FWD" : LV_SYMBOL_LEFT " REV");
+        lv_obj_set_style_bg_color(_dirBtn, newDir ? lv_color_make(40, 180, 40) : lv_color_make(180, 150, 30), 0);
+        _loco.direction = newDir;
+    }
+
+    // Function state updates from CS broadcast
+    for (int fn = 0; fn < 28; fn++) {
+        bool csState = loco->isFunctionOn(fn);
+        if (_loco.functions.test(fn) != csState) {
+            _loco.functions.set(fn, csState);
+            std::bitset<32> toggle;
+            toggle.set(fn);
+            toggleFunctionButtons(toggle);
         }
-        if (_loco.direction != broadcast.direction) {
-            lv_label_set_text(_dirLabel, broadcast.direction ? LV_SYMBOL_RIGHT " FWD" : LV_SYMBOL_LEFT " REV");
-            lv_obj_set_style_bg_color(_dirBtn, broadcast.direction ? lv_color_make(40, 180, 40) : lv_color_make(180, 150, 30), 0);
-        }
-        if (_loco.functions != broadcast.functions) {
-            toggleFunctionButtons(_loco.functions ^ broadcast.functions);
-        }
-        _loco = broadcast;
     }
 }
 
@@ -77,9 +86,8 @@ void LocoUI::buildSelectionMenu() {
     lv_obj_set_style_radius(_selectionMenu, 12, 0);
     lv_obj_set_style_shadow_width(_selectionMenu, 30, 0);
     lv_obj_set_style_shadow_opa(_selectionMenu, LV_OPA_50, 0);
-    lv_obj_add_flag(_selectionMenu, LV_OBJ_FLAG_HIDDEN); // Hidden by default
+    lv_obj_add_flag(_selectionMenu, LV_OBJ_FLAG_HIDDEN);
 
-    // Title Row
     lv_obj_t* title_row = lv_obj_create(_selectionMenu);
     lv_obj_set_width(title_row, LV_PCT(100));
     lv_obj_set_height(title_row, 40);
@@ -151,17 +159,15 @@ void LocoUI::buildControlScreen() {
     if (locoDoc.containsKey("name")) _locoName = locoDoc["name"].as<const char*>();
     String nameStr = _locoName;
 
-    // 1. Top Section — loco name (muted) above address (accent), nav arrows as tap targets
     _nameLabel = lv_label_create(_container);
     lv_label_set_text(_nameLabel, nameStr.c_str());
-    lv_obj_set_style_text_color(_nameLabel, lv_color_hex(0x999999), 0); // muted — secondary to address
+    lv_obj_set_style_text_color(_nameLabel, lv_color_hex(0x999999), 0);
     lv_obj_set_style_text_font(_nameLabel, &lv_font_montserrat_12, 0);
     lv_obj_align(_nameLabel, LV_ALIGN_TOP_MID, 0, 4);
 
-    // Prev / Next — semi-transparent pill so they read as tappable
     lv_obj_t* prev_btn = lv_btn_create(_container);
     lv_obj_set_size(prev_btn, 40, 40);
-    lv_obj_align(prev_btn, LV_ALIGN_TOP_LEFT, 3, 14); // centre circle over left fn column (col centre x=23, circle half=20)
+    lv_obj_align(prev_btn, LV_ALIGN_TOP_LEFT, 3, 14);
     lv_obj_set_style_bg_opa(prev_btn, LV_OPA_20, 0);
     lv_obj_set_style_bg_color(prev_btn, lv_color_hex(0xffffff), 0);
     lv_obj_set_style_shadow_width(prev_btn, 0, 0);
@@ -194,7 +200,7 @@ void LocoUI::buildControlScreen() {
 
     lv_obj_t* next_btn = lv_btn_create(_container);
     lv_obj_set_size(next_btn, 40, 40);
-    lv_obj_align(next_btn, LV_ALIGN_TOP_RIGHT, -3, 14); // centre circle over right fn column (col centre x=217, circle half=20 → right edge=237)
+    lv_obj_align(next_btn, LV_ALIGN_TOP_RIGHT, -3, 14);
     lv_obj_set_style_bg_opa(next_btn, LV_OPA_20, 0);
     lv_obj_set_style_bg_color(next_btn, lv_color_hex(0xffffff), 0);
     lv_obj_set_style_shadow_width(next_btn, 0, 0);
@@ -208,7 +214,6 @@ void LocoUI::buildControlScreen() {
     lv_obj_add_event_cb(next_btn, nav_btn_event_cb, LV_EVENT_CLICKED, this);
     lv_obj_set_user_data(next_btn, (void*)1);
 
-    // 2. Central Speedometer (lv_arc)
     _speedArc = lv_arc_create(_container);
     lv_obj_set_size(_speedArc, 130, 130);
     lv_arc_set_rotation(_speedArc, 135);
@@ -216,38 +221,33 @@ void LocoUI::buildControlScreen() {
     lv_arc_set_range(_speedArc, 0, 126);
     lv_arc_set_value(_speedArc, _loco.speed);
 
-    // Track: visible neutral dark — was invisible against the dark bg
     lv_obj_set_style_arc_color(_speedArc, lv_color_hex(0x363636), LV_PART_MAIN);
     lv_obj_set_style_arc_width(_speedArc, 10, LV_PART_MAIN);
     lv_obj_set_style_arc_width(_speedArc, 10, LV_PART_INDICATOR);
-    // Knob: accent blue, slightly padded so it reads as a drag target
     lv_obj_set_style_bg_color(_speedArc, lv_color_hex(0x5566ff), LV_PART_KNOB);
     lv_obj_set_style_pad_all(_speedArc, 4, LV_PART_KNOB);
 
     lv_color_t color;
-    if (_loco.speed < 42) color = lv_color_make(50, 255, 50);
+    if (_loco.speed < 42)      color = lv_color_make(50, 255, 50);
     else if (_loco.speed < 84) color = lv_color_make(255, 255, 50);
-    else color = lv_color_make(255, 50, 50);
+    else                       color = lv_color_make(255, 50, 50);
     lv_obj_set_style_arc_color(_speedArc, color, LV_PART_INDICATOR);
 
     lv_obj_align(_speedArc, LV_ALIGN_CENTER, 0, -5);
     lv_obj_add_event_cb(_speedArc, speed_arc_event_cb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Speed number — large, offset upward inside the arc
     _speedLabel = lv_label_create(_speedArc);
     lv_label_set_text_fmt(_speedLabel, "%d", _loco.speed);
     lv_obj_set_style_text_align(_speedLabel, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_font(_speedLabel, &lv_font_montserrat_28, 0);
     lv_obj_align(_speedLabel, LV_ALIGN_CENTER, 0, -8);
 
-    // "km/h" unit — smaller, muted, below the number
     lv_obj_t* unitLbl = lv_label_create(_speedArc);
     lv_label_set_text(unitLbl, "km/h");
     lv_obj_set_style_text_font(unitLbl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(unitLbl, lv_color_hex(0x888888), 0);
     lv_obj_align(unitLbl, LV_ALIGN_CENTER, 0, 14);
 
-    // 3. Bottom Action Bar (E-Stop | FWD/REV | Fn pages)
     lv_obj_t* estop_btn = lv_btn_create(_container);
     lv_obj_set_size(estop_btn, 65, 38);
     lv_obj_align(estop_btn, LV_ALIGN_BOTTOM_LEFT, 2, -2);
@@ -267,7 +267,6 @@ void LocoUI::buildControlScreen() {
     lv_obj_center(_dirLabel);
     lv_obj_add_event_cb(_dirBtn, dir_btn_event_cb, LV_EVENT_CLICKED, this);
 
-    // Fn page button — distinct surface with border so it reads as a button
     lv_obj_t* page_btn = lv_btn_create(_container);
     lv_obj_set_size(page_btn, 65, 38);
     lv_obj_align(page_btn, LV_ALIGN_BOTTOM_RIGHT, -2, -2);
@@ -280,7 +279,6 @@ void LocoUI::buildControlScreen() {
     lv_obj_center(_pageBtnLabel);
     lv_obj_add_event_cb(page_btn, page_btn_event_cb, LV_EVENT_CLICKED, this);
 
-    // 4. Build Function Buttons
     buildFunctionButtons(locoDoc);
     renderFunctionPage();
 }
@@ -292,7 +290,7 @@ void LocoUI::buildFunctionButtons(JsonDocument& locoDoc) {
     } else {
         File functionFile;
         fs::FS& fs = Settings.getFS();
-        
+
         if (locoDoc.containsKey("functions")) {
             const char* fnPath = locoDoc["functions"].as<const char*>();
             if (fs.exists(fnPath)) functionFile = fs.open(fnPath);
@@ -322,23 +320,20 @@ void LocoUI::buildFunctionButtons(JsonDocument& locoDoc) {
             const char* idle_icon = fn["btn"]["idle"]["icon"].as<const char*>();
             const char* pressed_label = fn["btn"]["pressed"]["label"].as<const char*>();
             const char* pressed_icon = fn["btn"]["pressed"]["icon"].as<const char*>();
-            
+
             lv_obj_t* btn = lv_btn_create(_container);
             lv_obj_set_size(btn, 42, 36);
-
-            // Neutral dark surface — overrides LVGL theme's blue-tinted default
             lv_obj_set_style_bg_color(btn, lv_color_hex(0x252525), 0);
             lv_obj_set_style_bg_color(btn, lv_color_hex(0x3a3a3a), LV_STATE_PRESSED);
             lv_obj_set_style_border_color(btn, lv_color_hex(0x484848), 0);
             lv_obj_set_style_border_width(btn, 1, 0);
             lv_obj_set_style_radius(btn, 6, 0);
-            // Active (checked) state: blue accent so active functions are clearly visible
             lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a3870), LV_STATE_CHECKED);
             lv_obj_set_style_border_color(btn, lv_color_hex(0x4466cc), LV_STATE_CHECKED);
             lv_obj_set_style_border_width(btn, 1, LV_STATE_CHECKED);
 
             if (latching) lv_obj_add_flag(btn, LV_OBJ_FLAG_CHECKABLE);
-            
+
             auto create_visual = [btn, func](const char* icon, const char* label) -> lv_obj_t* {
                 lv_obj_t* visual_obj = nullptr;
                 if (icon && strlen(icon) > 0) {
@@ -346,11 +341,11 @@ void LocoUI::buildFunctionButtons(JsonDocument& locoDoc) {
                     if (fsPath.startsWith("/$/")) fsPath = fsPath.substring(2);
                     if (!fsPath.startsWith("/")) fsPath = "/icons/" + fsPath;
                     if (!fsPath.endsWith(".bmp")) fsPath += ".bmp";
-                    
+
                     String fullIconPath = "";
                     if (WebsiteFS.exists(fsPath)) fullIconPath = "W:" + fsPath;
                     else if (Settings.getFS().exists(fsPath)) fullIconPath = "S:" + fsPath;
-                    
+
                     if (fullIconPath.length() > 0) {
                         visual_obj = lv_image_create(btn);
                         char* pathBuf = (char*)malloc(fullIconPath.length() + 1);
@@ -364,7 +359,7 @@ void LocoUI::buildFunctionButtons(JsonDocument& locoDoc) {
                         return visual_obj;
                     }
                 }
-                
+
                 visual_obj = lv_label_create(btn);
                 if (label && strlen(label) > 0) lv_label_set_text(visual_obj, label);
                 else lv_label_set_text_fmt(visual_obj, "F%d", func);
@@ -392,8 +387,8 @@ void LocoUI::buildFunctionButtons(JsonDocument& locoDoc) {
             lv_obj_set_user_data(btn, (void*)(uintptr_t)func);
             lv_obj_add_event_cb(btn, fn_btn_event_cb, LV_EVENT_VALUE_CHANGED, this);
             lv_obj_add_event_cb(btn, fn_btn_event_cb, LV_EVENT_CLICKED, this);
-            
-            lv_obj_add_flag(btn, LV_OBJ_FLAG_HIDDEN); // Hidden initially
+
+            lv_obj_add_flag(btn, LV_OBJ_FLAG_HIDDEN);
             _fnButtons.push_back(btn);
         }
     }
@@ -412,24 +407,15 @@ void LocoUI::renderFunctionPage() {
         lv_obj_t* btn = _fnButtons[idx];
         lv_obj_clear_flag(btn, LV_OBJ_FLAG_HIDDEN);
 
-        // 4 rows per column: start y=56 (clears nav circles at y=54).
-        // height=36, stride=38: 3×38+36=150, bottom at 206 — 4px above action bar.
         int y_pos = 56 + (i % 4) * 38;
-        if (i < 4) {
-            lv_obj_align(btn, LV_ALIGN_TOP_LEFT, 2, y_pos);
-        } else {
-            lv_obj_align(btn, LV_ALIGN_TOP_RIGHT, -2, y_pos);
-        }
+        if (i < 4) lv_obj_align(btn, LV_ALIGN_TOP_LEFT, 2, y_pos);
+        else        lv_obj_align(btn, LV_ALIGN_TOP_RIGHT, -2, y_pos);
     }
 
-    // Update Fn button to show page count when there are multiple pages
     if (_pageBtnLabel) {
         int totalPages = ((int)_fnButtons.size() + 7) / 8;
-        if (totalPages > 1) {
-            lv_label_set_text_fmt(_pageBtnLabel, "Fn %d/%d", _fnPage + 1, totalPages);
-        } else {
-            lv_label_set_text(_pageBtnLabel, "Fn");
-        }
+        if (totalPages > 1) lv_label_set_text_fmt(_pageBtnLabel, "Fn %d/%d", _fnPage + 1, totalPages);
+        else                lv_label_set_text(_pageBtnLabel, "Fn");
     }
 }
 
@@ -438,13 +424,10 @@ void LocoUI::toggleFunctionButtons(std::bitset<32> toggle) {
         uint8_t func = (uintptr_t)lv_obj_get_user_data(child);
         if (toggle.test(func)) {
             bool is_checked = _loco.functions.test(func);
-            if (is_checked) {
-                lv_obj_add_state(child, LV_STATE_CHECKED);
-            } else {
-                lv_obj_clear_state(child, LV_STATE_CHECKED);
-            }
+            if (is_checked) lv_obj_add_state(child, LV_STATE_CHECKED);
+            else            lv_obj_clear_state(child, LV_STATE_CHECKED);
             if (lv_obj_get_child_cnt(child) >= 2) {
-                lv_obj_t* idle_obj = lv_obj_get_child(child, 0);
+                lv_obj_t* idle_obj    = lv_obj_get_child(child, 0);
                 lv_obj_t* pressed_obj = lv_obj_get_child(child, 1);
                 if (is_checked) {
                     lv_obj_add_flag(idle_obj, LV_OBJ_FLAG_HIDDEN);
@@ -517,26 +500,24 @@ void LocoUI::refresh() {
     if (_loco.address != newAddr) {
         _loco.address = newAddr;
         _loco.speed = 0;
-        _loco.direction = 1; // FWD
+        _loco.direction = true;
         _loco.functions.reset();
     }
-    
+
+    if (_activeLoco) {
+        delete _activeLoco;
+        _activeLoco = nullptr;
+    }
+
     if (_loco.address == 0) {
         buildControlScreen();
         buildSelectionMenu();
-        // lv_obj_clear_flag(_selectionMenu, LV_OBJ_FLAG_HIDDEN); // Don't pop up automatically
     } else {
-        if (_broadcastLocoHandler == 0xFF) {
-            _broadcastLocoHandler = _dccExCS.addEventListener(DCCExCS::Event::BROADCAST_LOCO, [this](void* parameter) {
-                if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
-                    broadcast(parameter);
-                    xSemaphoreGive(lvgl_mutex);
-                }
-            });
-        }
         buildControlScreen();
         buildSelectionMenu();
-        _dccExCS.acquireLoco(_loco.address);
+        _activeLoco = new Loco(_loco.address, LocoSourceEntry);
+        _dccex.setThrottle(_activeLoco, 0, Direction::Forward);
+        Serial.printf("[DCC] %s (%d) acquired\n", _locoName.c_str(), _loco.address);
     }
 }
 
@@ -548,9 +529,7 @@ void LocoUI::open_selection_event_cb(lv_event_t * e) {
 
 void LocoUI::close_selection_event_cb(lv_event_t * e) {
     LocoUI* ui = (LocoUI*)lv_event_get_user_data(e);
-    if (ui->_selectionMenu) {
-        lv_obj_add_flag(ui->_selectionMenu, LV_OBJ_FLAG_HIDDEN);
-    }
+    if (ui->_selectionMenu) lv_obj_add_flag(ui->_selectionMenu, LV_OBJ_FLAG_HIDDEN);
 }
 
 void LocoUI::name_btn_event_cb(lv_event_t * e) {
@@ -604,12 +583,12 @@ void LocoUI::name_btn_event_cb(lv_event_t * e) {
             while (File file = dir.openNextFile()) {
                 if (!file.isDirectory()) {
                     uint16_t address = strtoul(file.name(), (char**)NULL, 10);
-                    
+
                     StaticJsonDocument<16> filterDoc;
                     filterDoc["name"] = true;
                     StaticJsonDocument<256> locoDoc;
                     deserializeJson(locoDoc, file, DeserializationOption::Filter(filterDoc));
-                    
+
                     String nameStr = "#";
                     nameStr += address;
                     nameStr += " - ";
@@ -638,10 +617,10 @@ void LocoUI::loco_selected_event_cb(lv_event_t * e) {
     LocoUI* ui = (LocoUI*)lv_event_get_user_data(e);
     lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
     uint16_t address = (uintptr_t)lv_obj_get_user_data(btn);
-    
+
     if (address > 0 && address <= 9999) {
         ui->_locos.add(address);
-        ui->_nameMenu = nullptr; 
+        ui->_nameMenu = nullptr;
         lv_async_call([](void* user_data) {
             ((LocoUI*)user_data)->refresh();
         }, ui);
@@ -654,9 +633,7 @@ void LocoUI::close_name_menu_event_cb(lv_event_t * e) {
         lv_obj_delete_async(ui->_nameMenu);
         ui->_nameMenu = nullptr;
     }
-    if (ui->_selectionMenu) {
-        lv_obj_clear_flag(ui->_selectionMenu, LV_OBJ_FLAG_HIDDEN);
-    }
+    if (ui->_selectionMenu) lv_obj_clear_flag(ui->_selectionMenu, LV_OBJ_FLAG_HIDDEN);
 }
 
 void LocoUI::group_btn_event_cb(lv_event_t * e) {
@@ -736,10 +713,10 @@ void LocoUI::group_selected_event_cb(lv_event_t * e) {
     LocoUI* ui = (LocoUI*)lv_event_get_user_data(e);
     lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
     int index = (uintptr_t)lv_obj_get_user_data(btn);
-    
+
     fs::FS& fs = Settings.getFS();
     if (!fs.exists("/groups.json")) return;
-    
+
     File groupsFile = fs.open("/groups.json");
     DynamicJsonDocument groupsDoc(4096);
     deserializeJson(groupsDoc, groupsFile);
@@ -749,31 +726,28 @@ void LocoUI::group_selected_event_cb(lv_event_t * e) {
     if (index >= 0 && index < groups.size()) {
         JsonObjectConst group = groups[index];
         JsonArrayConst locos = group["locos"];
-        
-        // Clear the current list in _nameMenu
-        lv_obj_t* list = lv_obj_get_child(ui->_nameMenu, 1); // 0 is title_row, 1 is list
+
+        lv_obj_t* list = lv_obj_get_child(ui->_nameMenu, 1);
         lv_obj_clean(list);
 
-        // Change title
         lv_obj_t* title_row = lv_obj_get_child(ui->_nameMenu, 0);
         lv_obj_t* title = lv_obj_get_child(title_row, 0);
         lv_label_set_text_fmt(title, "Group: %s", group["name"] | "Unknown");
 
-        fs::FS& fs = Settings.getFS();
-
+        fs::FS& fs2 = Settings.getFS();
         for (uint16_t address : locos) {
             char path[32];
             sprintf(path, "/locos/%d.json", address);
-            
+
             String nameStr = "#";
             nameStr += address;
             nameStr += " - ";
 
-            if (fs.exists(path)) {
+            if (fs2.exists(path)) {
                 StaticJsonDocument<16> filterDoc;
                 filterDoc["name"] = true;
                 StaticJsonDocument<256> locoDoc;
-                File locoFile = fs.open(path);
+                File locoFile = fs2.open(path);
                 deserializeJson(locoDoc, locoFile, DeserializationOption::Filter(filterDoc));
                 locoFile.close();
                 if (locoDoc.containsKey("name")) nameStr += locoDoc["name"].as<const char*>();
@@ -797,14 +771,19 @@ void LocoUI::group_selected_event_cb(lv_event_t * e) {
 void LocoUI::release_btn_event_cb(lv_event_t * e) {
     LocoUI* ui = (LocoUI*)lv_event_get_user_data(e);
     if (ui->_loco.address != 0) {
-        ui->_dccExCS.setLocoThrottle(ui->_loco.address, 0, ui->_loco.direction);
-        ui->_dccExCS.releaseLoco(ui->_loco.address);
+        if (ui->_activeLoco) {
+            ui->_dccex.setThrottle(ui->_activeLoco, 0,
+                ui->_loco.direction ? Direction::Forward : Direction::Reverse);
+            char cmd[16];
+            snprintf(cmd, sizeof(cmd), "- %d", ui->_loco.address);
+            ui->_dccex.sendCommand(cmd);
+            delete ui->_activeLoco;
+            ui->_activeLoco = nullptr;
+        }
         Serial.printf("[DCC] %s (%d) released\n", ui->_locoName.c_str(), ui->_loco.address);
         ui->_locos.remove();
-        
-        if (ui->_selectionMenu) {
-            lv_obj_add_flag(ui->_selectionMenu, LV_OBJ_FLAG_HIDDEN);
-        }
+
+        if (ui->_selectionMenu) lv_obj_add_flag(ui->_selectionMenu, LV_OBJ_FLAG_HIDDEN);
 
         lv_async_call([](void* user_data) {
             ((LocoUI*)user_data)->refresh();
@@ -842,7 +821,7 @@ void LocoUI::nav_btn_event_cb(lv_event_t * e) {
     LocoUI* ui = (LocoUI*)lv_event_get_user_data(e);
     intptr_t action = (intptr_t)lv_obj_get_user_data((lv_obj_t*)lv_event_get_target(e));
     if (action == 0) ui->_locos.prev();
-    else ui->_locos.next();
+    else             ui->_locos.next();
     ui->refresh();
 }
 
@@ -853,25 +832,30 @@ void LocoUI::dir_btn_event_cb(lv_event_t * e) {
         lv_label_set_text(ui->_dirLabel, ui->_loco.direction ? LV_SYMBOL_RIGHT " FWD" : LV_SYMBOL_LEFT " REV");
         lv_obj_set_style_bg_color(ui->_dirBtn, ui->_loco.direction ? lv_color_make(40, 180, 40) : lv_color_make(180, 150, 30), 0);
     }
-    ui->_dccExCS.setLocoThrottle(ui->_loco.address, ui->_loco.speed, ui->_loco.direction);
+    if (ui->_activeLoco) {
+        ui->_dccex.setThrottle(ui->_activeLoco, ui->_loco.speed,
+            ui->_loco.direction ? Direction::Forward : Direction::Reverse);
+    }
 }
 
 void LocoUI::speed_arc_event_cb(lv_event_t * e) {
     LocoUI* ui = (LocoUI*)lv_event_get_user_data(e);
     lv_obj_t* arc = (lv_obj_t*)lv_event_get_target(e);
     int speed = lv_arc_get_value(arc);
-    
-    if (ui->_speedLabel) {
-        lv_label_set_text_fmt(ui->_speedLabel, "%d", speed);
-    }
-    
+
+    if (ui->_speedLabel) lv_label_set_text_fmt(ui->_speedLabel, "%d", speed);
+
     lv_color_t color;
-    if (speed < 42) color = lv_color_make(50, 255, 50);
+    if (speed < 42)      color = lv_color_make(50, 255, 50);
     else if (speed < 84) color = lv_color_make(255, 255, 50);
-    else color = lv_color_make(255, 50, 50);
+    else                 color = lv_color_make(255, 50, 50);
     lv_obj_set_style_arc_color(arc, color, LV_PART_INDICATOR);
-    
-    ui->_dccExCS.setLocoThrottle(ui->_loco.address, speed, ui->_loco.direction);
+
+    ui->_loco.speed = speed;
+    if (ui->_activeLoco) {
+        ui->_dccex.setThrottle(ui->_activeLoco, speed,
+            ui->_loco.direction ? Direction::Forward : Direction::Reverse);
+    }
 }
 
 void LocoUI::fn_btn_event_cb(lv_event_t * e) {
@@ -882,7 +866,7 @@ void LocoUI::fn_btn_event_cb(lv_event_t * e) {
 
     if (lv_event_get_code(e) == LV_EVENT_VALUE_CHANGED) {
         if (lv_obj_get_child_cnt(btn) >= 2) {
-            lv_obj_t* idle_obj = lv_obj_get_child(btn, 0);
+            lv_obj_t* idle_obj    = lv_obj_get_child(btn, 0);
             lv_obj_t* pressed_obj = lv_obj_get_child(btn, 1);
             if (is_checked) {
                 lv_obj_add_flag(idle_obj, LV_OBJ_FLAG_HIDDEN);
@@ -894,7 +878,10 @@ void LocoUI::fn_btn_event_cb(lv_event_t * e) {
         }
     }
 
-    ui->_dccExCS.setLocoFn(ui->_loco.address, func, is_checked);
+    if (ui->_activeLoco) {
+        if (is_checked) ui->_dccex.functionOn(ui->_activeLoco, func);
+        else            ui->_dccex.functionOff(ui->_activeLoco, func);
+    }
 }
 
 void LocoUI::page_btn_event_cb(lv_event_t * e) {
@@ -906,7 +893,14 @@ void LocoUI::page_btn_event_cb(lv_event_t * e) {
 
 void LocoUI::estop_btn_event_cb(lv_event_t * e) {
     LocoUI* ui = (LocoUI*)lv_event_get_user_data(e);
-    ui->_dccExCS.setLocoThrottle(ui->_loco.address, 0, ui->_loco.direction);
+    ui->_loco.speed = 0;
+    if (ui->_activeLoco) {
+        ui->_dccex.setThrottle(ui->_activeLoco, 0,
+            ui->_loco.direction ? Direction::Forward : Direction::Reverse);
+    }
+    if (ui->_speedArc)   lv_arc_set_value(ui->_speedArc, 0);
+    if (ui->_speedLabel) lv_label_set_text(ui->_speedLabel, "0");
+    if (ui->_speedArc)   lv_obj_set_style_arc_color(ui->_speedArc, lv_color_make(50, 255, 50), LV_PART_INDICATOR);
 }
 
 void LocoUI::nudgeSpeed(int delta) {
@@ -916,9 +910,12 @@ void LocoUI::nudgeSpeed(int delta) {
     _loco.speed = speed;
     if (_speedLabel) lv_label_set_text_fmt(_speedLabel, "%d", speed);
     lv_color_t color;
-    if (speed < 42) color = lv_color_make(50, 255, 50);
+    if (speed < 42)      color = lv_color_make(50, 255, 50);
     else if (speed < 84) color = lv_color_make(255, 255, 50);
-    else color = lv_color_make(255, 50, 50);
+    else                 color = lv_color_make(255, 50, 50);
     lv_obj_set_style_arc_color(_speedArc, color, LV_PART_INDICATOR);
-    _dccExCS.setLocoThrottle(_loco.address, speed, _loco.direction);
+    if (_activeLoco) {
+        _dccex.setThrottle(_activeLoco, speed,
+            _loco.direction ? Direction::Forward : Direction::Reverse);
+    }
 }

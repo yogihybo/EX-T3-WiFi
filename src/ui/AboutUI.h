@@ -1,19 +1,28 @@
 #pragma once
 
 #include <LVGL_CYD.h>
-#include <DCCExCS.h>
+#include <DCCEXProtocol.h>
 #include "LVGL_Layouts.h"
+
+// CS info populated by AppDelegate on connect; read by AboutUI's update timer
+struct CSInfo {
+    String version;
+    String board;
+    String shield;
+    String build;
+    bool connected = false;
+};
+extern CSInfo csInfo;
 
 class AboutUI : public UIView {
   private:
     lv_obj_t* _container;
-    DCCExCS& _dccExCS;
-    uint16_t _csVersionHandler;
 
     lv_obj_t* _csVersion;
     lv_obj_t* _csBoard;
     lv_obj_t* _csShield;
     lv_obj_t* _csBuild;
+    lv_obj_t* _csConnected;
 
     lv_obj_t* _memLbl = nullptr;
     lv_obj_t* _wifiStat = nullptr;
@@ -24,7 +33,6 @@ class AboutUI : public UIView {
     static void close_btn_event_cb(lv_event_t * e);
 
   public:
-    AboutUI(DCCExCS& dccExCS, lv_obj_t* parent);
+    AboutUI(DCCEXProtocol& dccex, lv_obj_t* parent);
     ~AboutUI() override;
-
 };

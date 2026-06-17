@@ -1,7 +1,7 @@
 #pragma once
 
 #include <LVGL_CYD.h>
-#include <DCCExCS.h>
+#include <DCCEXProtocol.h>
 #include <Locos.h>
 #include <ArduinoJson.h>
 #include <bitset>
@@ -10,17 +10,24 @@
 
 class LocoUI : public UIView {
   private:
-    DCCExCS& _dccExCS;
+    DCCEXProtocol& _dccex;
     Locos& _locos;
-    DCCExCS::Loco _loco;
-    uint8_t _broadcastLocoHandler;
+
+    struct LocoState {
+        uint16_t address = 0;
+        int speed = 0;
+        bool direction = true; // true = FWD
+        std::bitset<32> functions;
+    } _loco;
+
+    Loco* _activeLoco = nullptr;
 
     lv_obj_t* _container;
     lv_obj_t* _selectionMenu;
     lv_obj_t* _nameMenu;
     lv_obj_t* _addressLabel;
     lv_obj_t* _nameLabel;
-    
+
     String _locoName;
 
     lv_obj_t* _speedArc;
@@ -32,7 +39,7 @@ class LocoUI : public UIView {
     lv_obj_t* _textarea;
 
     std::vector<lv_obj_t*> _fnButtons;
-    uint8_t _fnPage = 0; 
+    uint8_t _fnPage = 0;
 
     void buildSelectionMenu();
     void buildControlScreen();
@@ -44,11 +51,9 @@ class LocoUI : public UIView {
     void hideKeypad();
     void refresh();
 
-    void broadcast(void* parameter);
-
     static void addr_btn_event_cb(lv_event_t * e);
     static void kb_event_cb(lv_event_t * e);
-    
+
     static void open_selection_event_cb(lv_event_t * e);
     static void close_selection_event_cb(lv_event_t * e);
 
@@ -69,8 +74,9 @@ class LocoUI : public UIView {
     static void estop_btn_event_cb(lv_event_t * e);
 
   public:
-    LocoUI(DCCExCS& dccExCS, Locos& locos, lv_obj_t* parent);
+    LocoUI(DCCEXProtocol& dccex, Locos& locos, lv_obj_t* parent);
     ~LocoUI() override;
 
     void nudgeSpeed(int delta);
+    void onLocoUpdate(Loco* loco);
 };

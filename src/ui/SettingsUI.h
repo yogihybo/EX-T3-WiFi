@@ -2,14 +2,14 @@
 
 #include <LVGL_CYD.h>
 #include <Settings.h>
-#include <DCCExCS.h>
+#include <DCCEXProtocol.h>
 #include "LVGL_Layouts.h"
 #include "CalibrationUI.h"
 
 class SettingsUI : public UIView {
   private:
     lv_obj_t* _container;
-    DCCExCS& _dccExCS;
+    DCCEXProtocol& _dccex;
 
     class WiFiUI* _wifiUI;
     class AboutUI* _aboutUI;
@@ -48,9 +48,10 @@ class SettingsUI : public UIView {
     static void throttle_programming_event_cb(lv_event_t * e);
 
   public:
-    // Public so ThrottleServer can gate web access
     static bool throttleProgrammingActive;
 
-    SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent);
+    SettingsUI(DCCEXProtocol& dccex, lv_obj_t* parent);
     ~SettingsUI() override;
+
+    class ProgramUI* getProgramUI() { return _programUI; }
 };

@@ -1,14 +1,13 @@
 #pragma once
 
 #include <LVGL_CYD.h>
-#include <DCCExCS.h>
+#include <DCCEXProtocol.h>
 #include "LVGL_Layouts.h"
 
 class PowerUI : public UIView {
   private:
-    DCCExCS& _dccExCS;
-    DCCExCS::Power& _power;
-    uint8_t _broadcastPowerHandler;
+    DCCEXProtocol& _dccex;
+    bool _updatingFromBroadcast = false;
 
     lv_obj_t* _container;
     lv_obj_t* _powerAll;
@@ -19,6 +18,9 @@ class PowerUI : public UIView {
     static void btn_event_cb(lv_event_t * e);
 
   public:
-    PowerUI(DCCExCS& dccExCS, DCCExCS::Power& power, lv_obj_t* parent);
+    PowerUI(DCCEXProtocol& dccex, lv_obj_t* parent);
     ~PowerUI() override;
+
+    void onPowerUpdate(bool main, bool prog, bool join);
+    void onIndividualPowerUpdate(TrackPower state, int track);
 };

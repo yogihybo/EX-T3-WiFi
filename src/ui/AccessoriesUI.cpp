@@ -1,12 +1,11 @@
 #include "AccessoriesUI.h"
 
-AccessoriesUI::AccessoriesUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS) {
+AccessoriesUI::AccessoriesUI(DCCEXProtocol& dccex, lv_obj_t* parent) : _dccex(dccex) {
   _container = lv_obj_create(parent);
   lv_obj_set_size(_container, LV_PCT(100), LV_PCT(100));
   lv_obj_align(_container, LV_ALIGN_CENTER, 0, 0);
   lv_obj_set_style_pad_all(_container, 0, 0);
   lv_obj_set_style_border_width(_container, 0, 0);
-
 
   lv_obj_t* title = lv_label_create(_container);
   lv_label_set_text(title, "Accessory / Turnout Control");
@@ -18,7 +17,7 @@ AccessoriesUI::AccessoriesUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccE
   lv_obj_t* lbl_on = lv_label_create(btn_on);
   lv_label_set_text(lbl_on, "Turnout ON");
   lv_obj_center(lbl_on);
-  lv_obj_set_user_data(btn_on, (void*)1); // 1 = ON
+  lv_obj_set_user_data(btn_on, (void*)1);
   lv_obj_add_event_cb(btn_on, btn_event_cb, LV_EVENT_CLICKED, this);
 
   lv_obj_t* btn_off = lv_btn_create(_container);
@@ -27,7 +26,7 @@ AccessoriesUI::AccessoriesUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccE
   lv_obj_t* lbl_off = lv_label_create(btn_off);
   lv_label_set_text(lbl_off, "Turnout OFF");
   lv_obj_center(lbl_off);
-  lv_obj_set_user_data(btn_off, (void*)0); // 0 = OFF
+  lv_obj_set_user_data(btn_off, (void*)0);
   lv_obj_add_event_cb(btn_off, btn_event_cb, LV_EVENT_CLICKED, this);
 
   _keyboard = nullptr;
@@ -58,14 +57,8 @@ void AccessoriesUI::showKeypad(bool state) {
 }
 
 void AccessoriesUI::hideKeypad() {
-  if (_keyboard) {
-    lv_obj_delete_async(_keyboard);
-    _keyboard = nullptr;
-  }
-  if (_textarea) {
-    lv_obj_delete_async(_textarea);
-    _textarea = nullptr;
-  }
+  if (_keyboard) { lv_obj_delete_async(_keyboard); _keyboard = nullptr; }
+  if (_textarea) { lv_obj_delete_async(_textarea); _textarea = nullptr; }
 }
 
 void AccessoriesUI::btn_event_cb(lv_event_t * e) {
@@ -83,7 +76,8 @@ void AccessoriesUI::kb_event_cb(lv_event_t * e) {
     if (txt && strlen(txt) > 0) {
       uint16_t addr = atoi(txt);
       if (addr > 0 && addr <= 2044) {
-        ui->_dccExCS.accessory(addr, ui->_pending_state);
+        if (ui->_pending_state) ui->_dccex.activateLinearAccessory(addr);
+        else                    ui->_dccex.deactivateLinearAccessory(addr);
       }
     }
     ui->hideKeypad();

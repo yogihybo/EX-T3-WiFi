@@ -1,7 +1,7 @@
 #pragma once
 
 #include <LVGL_CYD.h>
-#include <DCCExCS.h>
+#include <DCCEXProtocol.h>
 #include "LVGL_Layouts.h"
 
 class ProgramUI : public UIView {
@@ -18,7 +18,7 @@ class ProgramUI : public UIView {
       WRITE_CV_BIT_GET_CV,
       WRITE_CV_BIT_GET_BIT,
       WRITE_CV_BIT_GET_VALUE,
-      
+
       ACK_LIMIT,
       ACK_MIN,
       ACK_MAX
@@ -27,12 +27,10 @@ class ProgramUI : public UIView {
     lv_obj_t* _container;
     lv_obj_t* _msgbox;
     lv_obj_t* _keyboard;
-    lv_obj_t* _ta; // Text area for numeric input
+    lv_obj_t* _ta;
 
-    DCCExCS& _dccExCS;
-    uint16_t _timeoutHandler;
-    uint16_t _writeHandler;
-    uint16_t _readHandler;
+    DCCEXProtocol& _dccex;
+    lv_timer_t* _timeoutTimer = nullptr;
     Step _step;
     uint16_t _stepData[3];
 
@@ -42,6 +40,8 @@ class ProgramUI : public UIView {
     void working();
     void result(const String& message, lv_color_t color);
     void clearMsgBox();
+    void startTimeout();
+    void cancelTimeout();
 
     static void close_btn_event_cb(lv_event_t * e);
     static void menu_btn_event_cb(lv_event_t * e);
@@ -49,8 +49,14 @@ class ProgramUI : public UIView {
     static void msgbox_delete_cb(lv_event_t * e);
     static void keypad_event_cb(lv_event_t * e);
     static void confirm_btn_event_cb(lv_event_t * e);
+    static void timeout_timer_cb(lv_timer_t* timer);
 
   public:
-    ProgramUI(DCCExCS& dccExCS, lv_obj_t* parent);
+    ProgramUI(DCCEXProtocol& dccex, lv_obj_t* parent);
     ~ProgramUI() override;
+
+    void receivedReadLoco(int address);
+    void receivedWriteLoco(int address);
+    void receivedReadCV(int cv, int value);
+    void receivedWriteCV(int cv, int value);
 };
