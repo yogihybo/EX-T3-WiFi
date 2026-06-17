@@ -23,7 +23,9 @@ The interface is split into four primary tabs anchored to the bottom of the scre
 
 
 ### Web Interface
-
+<p align="center">
+<img width="532" height="374" alt="image" src="https://github.com/user-attachments/assets/5bfa0c13-20c4-4d38-b070-d3ac0b6aa48c" />
+</p>
 A web interface running on the ESP32 allows for easy input of loco details and assigning functions. To enable editting in the web interface, the 'Throttle Programming' mode must be selected on the device screen first.
 
 - **Locos**: Add, edit, and delete locomotives by DCC address and name. Assign a default function set (F0–F9), a saved custom set, or define functions inline with the function editor.
