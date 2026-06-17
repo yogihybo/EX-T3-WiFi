@@ -87,6 +87,14 @@ SettingsUI::SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), 
   lv_obj_center(_speedStepLbl);
   lv_obj_add_event_cb(speed_btn, speed_step_event_cb, LV_EVENT_CLICKED, this);
 
+  static const char* accelLabels[] = { "Off", "Slow", "Medium", "Fast" };
+  lv_obj_t* accel_btn = lv_btn_create(_container);
+  lv_obj_set_width(accel_btn, LV_PCT(100));
+  _accelLbl = lv_label_create(accel_btn);
+  lv_label_set_text_fmt(_accelLbl, "Encoder Acceleration: %s", accelLabels[Settings.LocoUI.acceleration]);
+  lv_obj_center(_accelLbl);
+  lv_obj_add_event_cb(accel_btn, accel_event_cb, LV_EVENT_CLICKED, this);
+
   lv_obj_t* estop_btn = lv_btn_create(_container);
   lv_obj_set_width(estop_btn, LV_PCT(100));
   _eStopDelayLbl = lv_label_create(estop_btn);
@@ -165,6 +173,14 @@ void SettingsUI::speed_step_event_cb(lv_event_t * e) {
   SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
   if (++Settings.LocoUI.speedStep > 2) Settings.LocoUI.speedStep = 0;
   lv_label_set_text_fmt(ui->_speedStepLbl, "Encoder Sensitivity: %d", 1 << Settings.LocoUI.speedStep);
+  Settings.save();
+}
+
+void SettingsUI::accel_event_cb(lv_event_t * e) {
+  static const char* accelLabels[] = { "Off", "Slow", "Medium", "Fast" };
+  SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
+  if (++Settings.LocoUI.acceleration > 3) Settings.LocoUI.acceleration = 0;
+  lv_label_set_text_fmt(ui->_accelLbl, "Encoder Acceleration: %s", accelLabels[Settings.LocoUI.acceleration]);
   Settings.save();
 }
 

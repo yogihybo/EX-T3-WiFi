@@ -31,6 +31,7 @@ LocoUI::LocoUI(DCCExCS& dccExCS, Locos& locos, lv_obj_t* parent)
         buildControlScreen();
         buildSelectionMenu();
         _dccExCS.acquireLoco(_loco.address);
+        Serial.printf("[DCC] %s (%d) acquired\n", _locoName.c_str(), _loco.address);
     }
 }
 
@@ -146,8 +147,9 @@ void LocoUI::buildControlScreen() {
         locoFile.close();
     }
 
-    String nameStr = "Unknown Loco";
-    if (locoDoc.containsKey("name")) nameStr = locoDoc["name"].as<const char*>();
+    _locoName = "Unknown Loco";
+    if (locoDoc.containsKey("name")) _locoName = locoDoc["name"].as<const char*>();
+    String nameStr = _locoName;
 
     // 1. Top Section — loco name (muted) above address (accent), nav arrows as tap targets
     _nameLabel = lv_label_create(_container);
@@ -797,6 +799,7 @@ void LocoUI::release_btn_event_cb(lv_event_t * e) {
     if (ui->_loco.address != 0) {
         ui->_dccExCS.setLocoThrottle(ui->_loco.address, 0, ui->_loco.direction);
         ui->_dccExCS.releaseLoco(ui->_loco.address);
+        Serial.printf("[DCC] %s (%d) released\n", ui->_locoName.c_str(), ui->_loco.address);
         ui->_locos.remove();
         
         if (ui->_selectionMenu) {
