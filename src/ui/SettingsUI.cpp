@@ -8,7 +8,7 @@
 // Static flag – readable by ThrottleServer to gate web access
 bool SettingsUI::throttleProgrammingActive = false;
 
-SettingsUI::SettingsUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), _wifiUI(nullptr), _aboutUI(nullptr), _calibrationUI(nullptr), _programUI(nullptr) {
+SettingsUI::SettingsUI(DCCEXProtocol& dccex, lv_obj_t* parent) : _dccex(dccex), _wifiUI(nullptr), _aboutUI(nullptr), _calibrationUI(nullptr), _programUI(nullptr) {
   _container = lv_obj_create(parent);
   lv_obj_set_size(_container, LV_PCT(100), LV_PCT(100));
   lv_obj_align(_container, LV_ALIGN_CENTER, 0, 0);
@@ -317,7 +317,7 @@ void SettingsUI::about_event_cb(lv_event_t * e) {
       delete ui->_aboutUI;
   }
   // Use lv_layer_top() to guarantee it completely covers the full width of the screen over the header
-  ui->_aboutUI = new AboutUI(ui->_dccExCS, lv_layer_top());
+  ui->_aboutUI = new AboutUI(ui->_dccex, lv_layer_top());
 }
 
 void SettingsUI::programming_setup_event_cb(lv_event_t * e) {
@@ -325,7 +325,7 @@ void SettingsUI::programming_setup_event_cb(lv_event_t * e) {
   if (ui->_programUI) {
       delete ui->_programUI;
   }
-  ui->_programUI = new ProgramUI(ui->_dccExCS, lv_layer_top());
+  ui->_programUI = new ProgramUI(ui->_dccex, lv_layer_top());
 }
 
 void SettingsUI::calibrate_event_cb(lv_event_t * e) {

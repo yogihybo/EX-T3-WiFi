@@ -1,6 +1,8 @@
 #include "ProgramUI.h"
 
-ProgramUI::ProgramUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), _msgbox(nullptr), _keyboard(nullptr), _ta(nullptr) {
+ProgramUI::ProgramUI(DCCEXProtocol& dccex, lv_obj_t* parent)
+    : _dccex(dccex), _msgbox(nullptr), _keyboard(nullptr), _ta(nullptr) {
+
   _container = lv_obj_create(parent);
   lv_obj_set_size(_container, LV_PCT(100), LV_PCT(100));
   lv_obj_set_style_pad_all(_container, 0, 0);
@@ -8,8 +10,6 @@ ProgramUI::ProgramUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), _m
   lv_obj_set_flex_flow(_container, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_flex_align(_container, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
 
-
-  // Top header with Back button
   lv_obj_t* header = lv_obj_create(_container);
   lv_obj_set_width(header, LV_PCT(100));
   lv_obj_set_height(header, 50);
@@ -29,7 +29,6 @@ ProgramUI::ProgramUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), _m
   lv_obj_center(close_lbl);
   lv_obj_add_event_cb(close_btn, close_btn_event_cb, LV_EVENT_CLICKED, this);
 
-  // Content area — column of rows, each row holds a Read/Write pair (or 3 ACK buttons)
   lv_obj_t* content = lv_obj_create(_container);
   lv_obj_set_width(content, LV_PCT(100));
   lv_obj_set_flex_grow(content, 1);
@@ -76,32 +75,52 @@ ProgramUI::ProgramUI(DCCExCS& dccExCS, lv_obj_t* parent) : _dccExCS(dccExCS), _m
       lv_obj_add_event_cb(btn, menu_btn_event_cb, LV_EVENT_CLICKED, this);
     }
   }
-
-  // DCC Event Listeners
-  _timeoutHandler = _dccExCS.addEventListener(DCCExCS::Event::TIMEOUT, [this](void*) {
-    result("Timeout", lv_color_make(255, 0, 0));
-  });
-  _writeHandler = _dccExCS.addEventListener(DCCExCS::Event::PROGRAM_WRITE, [this](void* parameter) {
-    if (*static_cast<int16_t*>(parameter) == -1) {
-      result("Error", lv_color_make(255, 0, 0));
-    } else {
-      result("Success", lv_color_make(0, 255, 0));
-    }
-  });
-  _readHandler = _dccExCS.addEventListener(DCCExCS::Event::PROGRAM_READ, [this](void* parameter) {
-    if (*static_cast<int16_t*>(parameter) == -1) {
-      result("Error", lv_color_make(255, 0, 0));
-    } else {
-      result(String(*static_cast<int16_t*>(parameter)), lv_color_make(0, 255, 0));
-    }
-  });
 }
 
 ProgramUI::~ProgramUI() {
-  _dccExCS.removeEventListener(DCCExCS::Event::TIMEOUT, _timeoutHandler);
-  _dccExCS.removeEventListener(DCCExCS::Event::PROGRAM_WRITE, _writeHandler);
-  _dccExCS.removeEventListener(DCCExCS::Event::PROGRAM_READ, _readHandler);
+  cancelTimeout();
   if (_container) lv_obj_del(_container);
+}
+
+void ProgramUI::startTimeout() {
+  cancelTimeout();
+  _timeoutTimer = lv_timer_create(timeout_timer_cb, 10000, this);
+  lv_timer_set_repeat_count(_timeoutTimer, 1);
+}
+
+void ProgramUI::cancelTimeout() {
+  if (_timeoutTimer) {
+    lv_timer_del(_timeoutTimer);
+    _timeoutTimer = nullptr;
+  }
+}
+
+void ProgramUI::timeout_timer_cb(lv_timer_t* timer) {
+  ProgramUI* ui = (ProgramUI*)lv_timer_get_user_data(timer);
+  ui->_timeoutTimer = nullptr;
+  ui->result("Timeout", lv_color_make(255, 0, 0));
+}
+
+void ProgramUI::receivedReadLoco(int address) {
+  cancelTimeout();
+  result(String(address), lv_color_make(0, 255, 0));
+}
+
+void ProgramUI::receivedWriteLoco(int address) {
+  cancelTimeout();
+  result("Success", lv_color_make(0, 255, 0));
+}
+
+void ProgramUI::receivedReadCV(int cv, int value) {
+  cancelTimeout();
+  if (value == -1) result("Error", lv_color_make(255, 0, 0));
+  else             result(String(value), lv_color_make(0, 255, 0));
+}
+
+void ProgramUI::receivedWriteCV(int cv, int value) {
+  cancelTimeout();
+  if (value == -1) result("Error", lv_color_make(255, 0, 0));
+  else             result("Success", lv_color_make(0, 255, 0));
 }
 
 void ProgramUI::close_btn_event_cb(lv_event_t * e) {
@@ -110,30 +129,17 @@ void ProgramUI::close_btn_event_cb(lv_event_t * e) {
 }
 
 void ProgramUI::clearMsgBox() {
-  if (_keyboard) {
-    lv_obj_del(_keyboard);
-    _keyboard = nullptr;
-  }
-  if (_msgbox) {
-    lv_obj_del(_msgbox); 
-    _msgbox = nullptr;
-    _ta = nullptr;
-  }
+  cancelTimeout();
+  if (_keyboard) { lv_obj_del(_keyboard); _keyboard = nullptr; }
+  if (_msgbox)   { lv_obj_del(_msgbox);   _msgbox = nullptr; _ta = nullptr; }
 }
 
 void ProgramUI::msgbox_delete_cb(lv_event_t * e) {
   ProgramUI* ui = (ProgramUI*)lv_event_get_user_data(e);
   lv_obj_t* target = (lv_obj_t*)lv_event_get_target(e);
-  
-  if (ui->_keyboard) {
-    lv_obj_del(ui->_keyboard);
-    ui->_keyboard = nullptr;
-  }
-  
-  if (ui->_msgbox == target) {
-    ui->_msgbox = nullptr;
-    ui->_ta = nullptr;
-  }
+
+  if (ui->_keyboard) { lv_obj_del(ui->_keyboard); ui->_keyboard = nullptr; }
+  if (ui->_msgbox == target) { ui->_msgbox = nullptr; ui->_ta = nullptr; }
 }
 
 void ProgramUI::msgbox_close_cb(lv_event_t * e) {
@@ -147,9 +153,10 @@ void ProgramUI::menu_btn_event_cb(lv_event_t * e) {
   int id = (int)(uintptr_t)lv_obj_get_user_data(btn);
 
   switch(id) {
-    case 0: // Read Address
+    case 0:
       ui->working();
-      ui->_dccExCS.getLocoAddress();
+      ui->startTimeout();
+      ui->_dccex.readLoco();
       break;
     case 1: ui->newStep(Step::WRITE_ADDRESS_GET_ADDRESS, "Enter Address", 10293, 1); break;
     case 2: ui->newStep(Step::READ_CV_BYTE_GET_CV, "Enter CV Address", 1024, 1); break;
@@ -167,11 +174,11 @@ void ProgramUI::newStep(Step step, const String& title, uint16_t max, uint16_t m
   clearMsgBox();
 
   _msgbox = lv_msgbox_create(_container);
-  lv_obj_set_width(_msgbox, LV_PCT(100)); // Scale to fit screen width
+  lv_obj_set_width(_msgbox, LV_PCT(100));
   lv_obj_align(_msgbox, LV_ALIGN_TOP_MID, 0, 10);
   lv_obj_add_event_cb(_msgbox, msgbox_delete_cb, LV_EVENT_DELETE, this);
   lv_msgbox_add_title(_msgbox, title.c_str());
-  
+
   lv_msgbox_add_close_button(_msgbox);
 
   _ta = lv_textarea_create(_msgbox);
@@ -214,7 +221,6 @@ void ProgramUI::result(const String& message, lv_color_t color) {
   lv_obj_add_event_cb(_msgbox, msgbox_delete_cb, LV_EVENT_DELETE, this);
   lv_obj_t* title = lv_msgbox_add_title(_msgbox, message.c_str());
   lv_obj_set_style_text_color(title, color, 0);
-
   lv_msgbox_add_close_button(_msgbox);
 }
 
@@ -224,7 +230,7 @@ void ProgramUI::confirm(const String& message) {
   lv_obj_add_event_cb(_msgbox, msgbox_delete_cb, LV_EVENT_DELETE, this);
   lv_msgbox_add_title(_msgbox, "Confirm");
   lv_msgbox_add_text(_msgbox, message.c_str());
-  
+
   lv_obj_t* yes_btn = lv_msgbox_add_footer_button(_msgbox, "Yes");
   lv_obj_add_event_cb(yes_btn, confirm_btn_event_cb, LV_EVENT_CLICKED, this);
 
@@ -239,15 +245,18 @@ void ProgramUI::confirm_btn_event_cb(lv_event_t * e) {
   switch(ui->_step) {
     case Step::WRITE_ADDRESS_GET_ADDRESS:
       ui->working();
-      ui->_dccExCS.setLocoAddress(number);
+      ui->startTimeout();
+      ui->_dccex.writeLocoAddress(number);
       break;
     case Step::WRITE_CV_BYTE_GET_VALUE:
       ui->working();
-      ui->_dccExCS.setLocoCVByte(ui->_stepData[0], number);
+      ui->startTimeout();
+      ui->_dccex.writeCV(ui->_stepData[0], number);
       break;
     case Step::WRITE_CV_BIT_GET_VALUE:
       ui->working();
-      ui->_dccExCS.setLocoCVBit(ui->_stepData[0], ui->_stepData[1], number);
+      ui->startTimeout();
+      ui->_dccex.writeCVBit(ui->_stepData[0], ui->_stepData[1], number);
       break;
     default:
       break;
@@ -258,12 +267,12 @@ void ProgramUI::keypadEnter(uint32_t number) {
   switch (_step) {
     case Step::WRITE_ADDRESS_GET_ADDRESS: {
       _stepData[2] = number;
-      String message = "Write Address?\nAddress: " + String(number);
-      confirm(message);
+      confirm("Write Address?\nAddress: " + String(number));
     } break;
     case Step::READ_CV_BYTE_GET_CV: {
       working();
-      _dccExCS.getLocoCVByte(number);
+      startTimeout();
+      _dccex.readCV(number);
     } break;
     case Step::WRITE_CV_BYTE_GET_CV: {
       _stepData[0] = number;
@@ -271,8 +280,7 @@ void ProgramUI::keypadEnter(uint32_t number) {
     } break;
     case Step::WRITE_CV_BYTE_GET_VALUE: {
       _stepData[2] = number;
-      String message = "Write CV Value?\nCV: " + String(_stepData[0]) + "\nValue: " + String(number);
-      confirm(message);
+      confirm("Write CV Value?\nCV: " + String(_stepData[0]) + "\nValue: " + String(number));
     } break;
     case Step::READ_CV_BIT_GET_CV: {
       _stepData[0] = number;
@@ -280,7 +288,8 @@ void ProgramUI::keypadEnter(uint32_t number) {
     } break;
     case Step::READ_CV_BIT_GET_BIT: {
       working();
-      _dccExCS.getLocoCVBit(_stepData[0], number);
+      startTimeout();
+      _dccex.validateCVBit(_stepData[0], number, 1);
     } break;
     case Step::WRITE_CV_BIT_GET_CV: {
       _stepData[0] = number;
@@ -292,19 +301,24 @@ void ProgramUI::keypadEnter(uint32_t number) {
     } break;
     case Step::WRITE_CV_BIT_GET_VALUE: {
       _stepData[2] = number;
-      String message = "Write CV Bit Value?\nCV: " + String(_stepData[0]) + "\nBit: " + String(_stepData[1]) + "\nValue: " + String(number);
-      confirm(message);
+      confirm("Write CV Bit Value?\nCV: " + String(_stepData[0]) + "\nBit: " + String(_stepData[1]) + "\nValue: " + String(number));
     } break;
     case Step::ACK_LIMIT: {
-      _dccExCS.setAckLimit(number);
+      char cmd[32];
+      snprintf(cmd, sizeof(cmd), "D ACK LIMIT %lu", number);
+      _dccex.sendCommand(cmd);
       result("ACK Set", lv_color_make(0, 255, 0));
     } break;
     case Step::ACK_MIN: {
-      _dccExCS.setAckMin(number);
+      char cmd[32];
+      snprintf(cmd, sizeof(cmd), "D ACK MIN %lu", number);
+      _dccex.sendCommand(cmd);
       result("ACK Set", lv_color_make(0, 255, 0));
     } break;
     case Step::ACK_MAX: {
-      _dccExCS.setAckMax(number);
+      char cmd[32];
+      snprintf(cmd, sizeof(cmd), "D ACK MAX %lu", number);
+      _dccex.sendCommand(cmd);
       result("ACK Set", lv_color_make(0, 255, 0));
     } break;
   }
