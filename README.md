@@ -87,7 +87,8 @@ A web interface running on the ESP32 allows for easy input of loco details and a
 - **PlatformIO**: Primary build environment and C++ Framework
 - **LVGL (v9.1)**: Modern embedded graphics library handling the UI, layouts, widgets, and multi-tab swiping physics.
 - **FreeRTOS**: Handles async WiFi keep-alives, background voltage checks, and strictly manages LVGL thread safety via Mutex locks.
-- **AsyncTCP**: Low-latency network stack for high-performance bidirectional DCC-EX communication.
+- **DCCEXProtocol (v1.3+)**: Official DCC-EX client library handling all Command Station communication — throttle, power, programming track, and accessory commands — via a delegate callback pattern.
+- **AsyncTCP**: Low-latency TCP stack used by the web interface.
 
 ---
 
@@ -99,8 +100,9 @@ The system is constructed around a single, persistent root layout. The core UI m
 The entry point of the firmware. 
 - Initializes the ESP32 hardware, the TFT/CYD drivers, and LVGL.
 - Spawns asynchronous FreeRTOS background tasks (`keepWiFiAlive`, `powerCheck`).
-- Intercepts incoming network streams from `AsyncTCP` and routes DCC-EX packets.
-- **Thread Safety**: Governs a global `lvgl_mutex` Semaphore. All asynchronous network/hardware callbacks are strictly locked before mutating LVGL widget states, ensuring the UI loop never panics during concurrent touch inputs.
+- Manages the `DCCEXProtocol` connection lifecycle: a `WiFiClient` TCP connection is established by `keepWiFiAlive` and handed to `DCCEXProtocol::connect()` in `loop()`. A `TeeStream` wrapper intercepts the raw stream to parse Command Station board/shield info without consuming bytes from the library.
+- An `AppDelegate` implementing `DCCEXProtocolDelegate` receives all CS callbacks (speed updates, power state, CV read/write results) and dispatches them to the relevant UI module.
+- **Thread Safety**: Governs a global `lvgl_mutex` Semaphore. `DCCEXProtocol::check()` and `lv_timer_handler()` are called together inside the same mutex block, so delegate callbacks fire already holding the lock and can safely update LVGL widgets directly.
 
 ### 2. Global View Manager (`LVGL_Layouts.cpp / .h`)
 A native LVGL container system for the UI.
@@ -118,7 +120,7 @@ The primary dashboard for driving locomotives.
 A fast-access manager for layout turnouts and switch machines. Tapping ON/OFF dynamically summons a numeric `lv_keyboard` mapped to an input area, letting you rapidly punch in DCC Accessory Addresses (1-2044) and broadcast their states to the track.
 
 ### 5. Track Power (`PowerUI.cpp`)
-Binds natively to incoming `BROADCAST_POWER` events from the Command Station. Features tactile toggle switches to safely manipulate power across the Main Track, Programming Track, or electronically join them together.
+Receives power state via `AppDelegate::receivedTrackPower` and `receivedIndividualTrackPower` callbacks from the `DCCEXProtocol` library. Features tactile toggle switches to control power across the Main Track, Programming Track, or electronically join them together.
 
 ### 6. Settings & Network Hub (`SettingsUI.cpp`)
 - Controls hardware variables like screen brightness. Includes sub-modules (`WiFiUI.cpp` and `AboutUI.cpp`) that dynamically popup over the settings UI.

@@ -63,7 +63,7 @@ public:
 
     if (request->method() == HTTP_GET) {
       if (url == "/locos" || url == "/fns" || url == "/icons") {
-        AsyncJsonResponse* response = new AsyncJsonResponse(true, 4096);
+        AsyncJsonResponse* response = new AsyncJsonResponse(true, 2048);
         JsonVariant& list = response->getRoot();
 
         auto listDir = [](File dir, auto cb) {
