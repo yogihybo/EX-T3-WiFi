@@ -11,6 +11,7 @@
 #include <DNSServer.h>
 #include <ThrottleServer.h>
 #include "XPT2046_Bitbang.h"
+#include <ESP32RotaryEncoder.h>
 
 #include "LVGL_Layouts.h"
 #include "lv_port_fs.h"
@@ -78,6 +79,7 @@ DCCExCS dccExCS(csClient);
 DCCExCS::Power power;
 Locos locos;
 ThrottleServer throttleServer;
+RotaryEncoder rotaryEncoder(ENCODER_CLK_PIN, ENCODER_DT_PIN, ENCODER_BTN_PIN, 2); // HW-040 has 2 steps per detent
 DNSServer dns;
 bool ap_active = false;
 
@@ -414,43 +416,28 @@ void setup() {
   Settings.addEventListener(SettingsClass::Event::CS_CHANGE,
                             [](void *) { WiFi.disconnect(); });
 
-  // Rotary encoder – CLK/DT → throttle nudge via hardware interrupt + LVGL drain timer
-  pinMode(ENCODER_CLK_PIN, INPUT_PULLUP);
-  pinMode(ENCODER_DT_PIN,  INPUT_PULLUP);
-  static volatile int     encPending  = 0;
-  static volatile int32_t encLastUs   = 0;
-  attachInterrupt(digitalPinToInterrupt(ENCODER_CLK_PIN), []() IRAM_ATTR {
-      int32_t now = (int32_t)micros();
-      if (now - encLastUs < 4000) return; // ignore pulses within 4 ms of last valid one
-      encLastUs = now;
-      encPending += (digitalRead(ENCODER_DT_PIN) == HIGH) ? 1 : -1;
-  }, FALLING);
+  // Rotary encoder – handled by ESP32RotaryEncoder library
+  // onTurned fires from an esp_timer ISR context, so only update a counter there.
+  // An LVGL timer drains it on the main loop where LVGL calls are safe.
+  static volatile long encLastValue = 0;
+  static volatile int  encPending   = 0;
+  rotaryEncoder.setEncoderType(EncoderType::SW_FLOAT); // HW-040: pull-ups on CLK/DT, SW resistor unpopulated
+  rotaryEncoder.setBoundaries(-10000, 10000, false);
+  rotaryEncoder.onTurned([](long value) {
+      encPending += (int)(value - encLastValue);
+      encLastValue = value;
+  });
+  rotaryEncoder.onPressed([](unsigned long duration) {
+      if (duration >= (uint32_t)Settings.emergencyStopDelay * 1000U)
+          dccExCS.emergencyStopAll();
+  });
+  rotaryEncoder.begin();
   lv_timer_create([](lv_timer_t*) {
       int steps = encPending;
-      if (steps == 0) return;
+      if (steps == 0 || !locoUI) return;
       encPending -= steps;
-      int delta = steps * (1 << Settings.LocoUI.speedStep);
-      if (locoUI) locoUI->nudgeSpeed(delta);
+      locoUI->nudgeSpeed(steps * (1 << Settings.LocoUI.speedStep));
   }, 20, nullptr);
-
-  // Encoder button long-press → emergency stop
-  pinMode(ENCODER_BTN_PIN, INPUT); // GPIO35 input-only; TEMPORARY for testing
-  static uint32_t btnPressStart = 0;
-  static bool btnArmed = false;
-  lv_timer_create([](lv_timer_t*) {
-      bool pressed = (digitalRead(ENCODER_BTN_PIN) == LOW);
-      if (pressed) {
-          if (!btnArmed) {
-              btnPressStart = millis();
-              btnArmed = true;
-          } else if ((millis() - btnPressStart) >= (uint32_t)Settings.emergencyStopDelay * 1000U) {
-              dccExCS.emergencyStopAll();
-              btnArmed = false; // Don't fire again until released and re-pressed
-          }
-      } else {
-          btnArmed = false;
-      }
-  }, 50, nullptr);
 
   xTaskCreatePinnedToCore(powerCheck, "powerCheck", 2048, NULL, 1, NULL, 1);
   xTaskCreatePinnedToCore(keepWiFiAlive, "keepWiFiAlive", 4096, NULL, 1, NULL, 1);
