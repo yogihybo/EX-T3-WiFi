@@ -24,12 +24,12 @@ The interface is split into four primary tabs anchored to the bottom of the scre
 
 ### Web Interface
 
-A web interface running on the ESP32 allows for easy input of loco details and assigning functions. supports both internal memory and SD card with the ability to move configs between the two.
+A web interface running on the ESP32 allows for easy input of loco details and assigning functions. To enable editting in the web interface, the 'Throttle Programming' mode must be selected on the device screen first.
 
 - **Locos**: Add, edit, and delete locomotives by DCC address and name. Assign a default function set (F0–F9), a saved custom set, or define functions inline with the function editor.
 - **Function Sets**: Create reusable function sets with per-button label, colour, latching mode, and icon. Rows can be reordered by drag and drop.
 - **Groups**: Organise locos into named groups for quick selection on the throttle. Groups and their members can be reordered by drag and drop.
-- **Bulk Export / Import**: The Storage settings tab provides a one-click export of all locos, function sets, and groups to a single JSON backup file, and a matching import to restore from it.
+- **Bulk Export / Import**: The Storage settings tab provides a one-click export of all locos, function sets, and groups to a single JSON backup file, and a matching import to restore from it. Storage of the loco roster and functions can be on either the internal ESP32 flash memory or an SD card (selected using setting menu on the device screen) The web interface allow for bulk import / exporting from either location.
 
 ---
 
