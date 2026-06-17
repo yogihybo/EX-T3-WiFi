@@ -8,6 +8,8 @@ class PowerUI : public UIView {
   private:
     DCCEXProtocol& _dccex;
     bool _updatingFromBroadcast = false;
+    bool _mainOn = false;
+    bool _progOn = false;
 
     lv_obj_t* _container;
     lv_obj_t* _powerAll;

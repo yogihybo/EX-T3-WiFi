@@ -47,7 +47,9 @@ void LocoUI::onLocoUpdate(Loco* loco) {
     int newSpeed = loco->getSpeed();
     bool newDir = (loco->getDirection() == Direction::Forward);
 
-    if (_loco.speed != newSpeed) {
+    // Ignore stale CS echoes while the user is actively changing speed
+    bool localHold = (millis() - _lastLocalSpeedMs) < SPEED_LOCAL_HOLD_MS;
+    if (!localHold && _loco.speed != newSpeed) {
         lv_arc_set_value(_speedArc, newSpeed);
         lv_label_set_text_fmt(_speedLabel, "%d", newSpeed);
 
@@ -852,6 +854,7 @@ void LocoUI::speed_arc_event_cb(lv_event_t * e) {
     lv_obj_set_style_arc_color(arc, color, LV_PART_INDICATOR);
 
     ui->_loco.speed = speed;
+    ui->_lastLocalSpeedMs = millis();
     if (ui->_activeLoco) {
         ui->_dccex.setThrottle(ui->_activeLoco, speed,
             ui->_loco.direction ? Direction::Forward : Direction::Reverse);
@@ -908,6 +911,7 @@ void LocoUI::nudgeSpeed(int delta) {
     int speed = constrain((int)lv_arc_get_value(_speedArc) + delta, 0, 126);
     lv_arc_set_value(_speedArc, speed);
     _loco.speed = speed;
+    _lastLocalSpeedMs = millis();
     if (_speedLabel) lv_label_set_text_fmt(_speedLabel, "%d", speed);
     lv_color_t color;
     if (speed < 42)      color = lv_color_make(50, 255, 50);

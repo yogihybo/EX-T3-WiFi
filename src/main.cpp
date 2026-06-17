@@ -23,6 +23,7 @@
 #include "SettingsUI.h"
 #include "WiFiUI.h"
 #include "AboutUI.h"
+#include "TeeStream.h"
 #include "ProgramUI.h"
 #include <memory>
 
@@ -69,6 +70,35 @@ const uint32_t POWER_CHECK = 60000 * 2;
 const uint16_t CONNECTION_ALIVE_DELAY = 5000;
 
 WiFiClient csClient;
+TeeStream  csMonitor(csClient, [](const char* cmd) {
+  // Parse <i...> server description: "iDCC-EX V-x.x.x / BOARD / SHIELD / BUILD"
+  if (cmd[0] != 'i') return;
+
+  auto trimRight = [](const char* s, int len) -> String {
+    while (len > 0 && (s[len-1] == ' ' || s[len-1] == '\r' || s[len-1] == '\n')) len--;
+    return String(s).substring(0, len);
+  };
+
+  const char* p = strchr(cmd, '/');
+  if (!p) return;
+  p++; while (*p == ' ') p++;
+
+  const char* next = strstr(p, " / ");
+  if (!next) { csInfo.board = trimRight(p, strlen(p)); return; }
+  csInfo.board = trimRight(p, next - p);
+  p = next + 3;
+
+  next = strstr(p, " / ");
+  if (!next) { csInfo.shield = trimRight(p, strlen(p)); return; }
+  csInfo.shield = trimRight(p, next - p);
+  p = next + 3;
+
+  next = strstr(p, " / ");
+  csInfo.build = trimRight(p, next ? (next - p) : (int)strlen(p));
+
+  Serial.printf("[DCC] CS Board: %s  Shield: %s  Build: %s\n",
+                csInfo.board.c_str(), csInfo.shield.c_str(), csInfo.build.c_str());
+});
 volatile bool csIsConnected = false;
 volatile bool csConnectPending = false;
 Locos locos;
@@ -90,6 +120,9 @@ class AppDelegate;
 
 // AppDelegate – receives callbacks from DCCEXProtocol and dispatches to UI
 class AppDelegate : public DCCEXProtocolDelegate {
+  // The library calls receivedIndividualTrackPower then receivedTrackPower for
+  // MAIN-track changes. Guard against the spurious global call.
+  bool _hadIndividualPowerUpdate = false;
 public:
   void receivedServerVersion(int major, int minor, int patch) override {
     csInfo.version = String(major) + "." + String(minor) + "." + String(patch);
@@ -101,11 +134,16 @@ public:
   }
 
   void receivedTrackPower(TrackPower state) override {
+    // Library fires this for true global <p X> broadcasts AND for MAIN individual
+    // changes (after receivedIndividualTrackPower). Skip the latter to avoid
+    // incorrectly mirroring MAIN state onto PROG.
+    if (_hadIndividualPowerUpdate) { _hadIndividualPowerUpdate = false; return; }
     bool on = (state == TrackPower::PowerOn);
     if (pwrUI) pwrUI->onPowerUpdate(on, on, false);
   }
 
   void receivedIndividualTrackPower(TrackPower state, int track) override {
+    _hadIndividualPowerUpdate = true;
     if (pwrUI) pwrUI->onIndividualPowerUpdate(state, track);
   }
 
@@ -391,8 +429,10 @@ void setup() {
       }
 
       long delta = rotaryEncoder.encoderChanged();
-      if (delta != 0 && locoUI)
+      if (delta != 0 && locoUI) {
+          if (main_tabview) lv_tabview_set_act(main_tabview, 0, LV_ANIM_OFF);
           locoUI->nudgeSpeed((int)-delta * (1 << Settings.LocoUI.speedStep));
+      }
 
       // Button long press – E-Stop (currently disabled)
       // static uint32_t btnDownSince = 0;
@@ -424,7 +464,7 @@ void loop() {
   // Pick up CS connection established by keepWiFiAlive
   if (csConnectPending) {
     csConnectPending = false;
-    dccexProtocol.connect(&csClient);
+    dccexProtocol.connect(&csMonitor);
     dccexProtocol.sendCommand("s"); // Request server version/status
     if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
       set_header_cs_status(true);
