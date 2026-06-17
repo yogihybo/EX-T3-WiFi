@@ -11,7 +11,7 @@
 #include <DNSServer.h>
 #include <ThrottleServer.h>
 #include "XPT2046_Bitbang.h"
-#include <ESP32RotaryEncoder.h>
+#include <AiEsp32RotaryEncoder.h>
 
 #include "LVGL_Layouts.h"
 #include "lv_port_fs.h"
@@ -79,7 +79,9 @@ DCCExCS dccExCS(csClient);
 DCCExCS::Power power;
 Locos locos;
 ThrottleServer throttleServer;
-RotaryEncoder rotaryEncoder(ENCODER_CLK_PIN, ENCODER_DT_PIN, ENCODER_BTN_PIN, 2); // HW-040 has 2 steps per detent
+AiEsp32RotaryEncoder rotaryEncoder(ENCODER_CLK_PIN, ENCODER_DT_PIN, ENCODER_BTN_PIN, -1, 2); // -1 = no VCC pin; 2 steps per detent (HW-040)
+void IRAM_ATTR encoderISR()       { rotaryEncoder.readEncoder_ISR(); }
+void IRAM_ATTR encoderButtonISR() { rotaryEncoder.readButton_ISR(); }
 DNSServer dns;
 bool ap_active = false;
 
@@ -347,7 +349,7 @@ void setup() {
   }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   // CS connected
   csClient.onConnect([](void *arg, AsyncClient *client) {
-    Serial.printf("[CS] Command Station connected – %s:%u\n",
+    Serial.printf("[DCC] Command Station connected – %s:%u\n",
                   Settings.CS.server().c_str(), Settings.CS.port());
     csIsConnected = true;
     if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
@@ -358,7 +360,7 @@ void setup() {
   });
   // CS disconnected
   csClient.onDisconnect([](void *arg, AsyncClient *client) {
-    Serial.printf("[CS] Command Station disconnected\n");
+    Serial.printf("[DCC] Command Station disconnected\n");
     csIsConnected = false;
     if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
         set_header_cs_status(false);
@@ -416,27 +418,35 @@ void setup() {
   Settings.addEventListener(SettingsClass::Event::CS_CHANGE,
                             [](void *) { WiFi.disconnect(); });
 
-  // Rotary encoder – handled by ESP32RotaryEncoder library
-  // onTurned fires from an esp_timer ISR context, so only update a counter there.
-  // An LVGL timer drains it on the main loop where LVGL calls are safe.
-  static volatile long encLastValue = 0;
-  static volatile int  encPending   = 0;
-  rotaryEncoder.setEncoderType(EncoderType::SW_FLOAT); // HW-040: pull-ups on CLK/DT, SW resistor unpopulated
-  rotaryEncoder.setBoundaries(-10000, 10000, false);
-  rotaryEncoder.onTurned([](long value) {
-      encPending += (int)(value - encLastValue);
-      encLastValue = value;
-  });
-  rotaryEncoder.onPressed([](unsigned long duration) {
-      if (duration >= (uint32_t)Settings.emergencyStopDelay * 1000U)
-          dccExCS.emergencyStopAll();
-  });
+  // Rotary encoder – AiEsp32RotaryEncoder (polling via LVGL timer, ISR-safe)
   rotaryEncoder.begin();
+  rotaryEncoder.setup(encoderISR, encoderButtonISR);
+  rotaryEncoder.setBoundaries(-10000, 10000, false);
   lv_timer_create([](lv_timer_t*) {
-      int steps = encPending;
-      if (steps == 0 || !locoUI) return;
-      encPending -= steps;
-      locoUI->nudgeSpeed(steps * (1 << Settings.LocoUI.speedStep));
+      // Sync acceleration setting live
+      static const uint16_t accelValues[] = { 0, 10, 20, 40 };
+      static uint8_t lastAccel = 0xFF;
+      if (Settings.LocoUI.acceleration != lastAccel) {
+          lastAccel = Settings.LocoUI.acceleration;
+          rotaryEncoder.setAcceleration(accelValues[lastAccel]);
+      }
+
+      // Rotation
+      long delta = rotaryEncoder.encoderChanged();
+      if (delta != 0 && locoUI)
+          locoUI->nudgeSpeed((int)delta * (1 << Settings.LocoUI.speedStep));
+
+      // Button – long press triggers E-Stop
+      static uint32_t btnDownSince = 0;
+      if (rotaryEncoder.isEncoderButtonDown()) {
+          if (btnDownSince == 0) btnDownSince = millis();
+          else if (millis() - btnDownSince >= (uint32_t)Settings.emergencyStopDelay * 1000U) {
+              dccExCS.emergencyStopAll();
+              btnDownSince = 0;
+          }
+      } else {
+          btnDownSince = 0;
+      }
   }, 20, nullptr);
 
   xTaskCreatePinnedToCore(powerCheck, "powerCheck", 2048, NULL, 1, NULL, 1);

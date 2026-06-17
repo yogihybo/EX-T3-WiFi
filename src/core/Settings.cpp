@@ -165,11 +165,13 @@ void SettingsClass::CS::port(uint16_t value) {
 }
 
 void SettingsClass::LocoUI::load(const JsonObject& obj) {
-  speedStep = obj["step"] | speedStep;
+  speedStep    = obj["step"]  | speedStep;
+  acceleration = obj["accel"] | acceleration;
 }
 
 void SettingsClass::LocoUI::save(const JsonObject& obj) {
-  obj["step"] = speedStep;
+  obj["step"]  = speedStep;
+  obj["accel"] = acceleration;
 }
 
 SettingsClass Settings;

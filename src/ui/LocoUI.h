@@ -21,6 +21,8 @@ class LocoUI : public UIView {
     lv_obj_t* _addressLabel;
     lv_obj_t* _nameLabel;
     
+    String _locoName;
+
     lv_obj_t* _speedArc;
     lv_obj_t* _speedLabel;
     lv_obj_t* _dirBtn;

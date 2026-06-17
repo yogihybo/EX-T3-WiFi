@@ -106,7 +106,15 @@ class SettingsClass : public Events {
         static constexpr uint8_t STEP_4 = 2;
       };
 
-      uint8_t speedStep = SpeedStep::STEP_1;
+      struct Acceleration {
+        static constexpr uint8_t OFF    = 0;
+        static constexpr uint8_t SLOW   = 1;
+        static constexpr uint8_t MEDIUM = 2;
+        static constexpr uint8_t FAST   = 3;
+      };
+
+      uint8_t speedStep    = SpeedStep::STEP_1;
+      uint8_t acceleration = Acceleration::MEDIUM;
 
       private:
         void load(const JsonObject& obj);
