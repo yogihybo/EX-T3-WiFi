@@ -61,10 +61,10 @@ A web interface running on the ESP32 allows for easy input of loco details and a
 | Touch CLK | 25 | — | Bit-bang SPI |
 | Touch CS | 33 | — | XPT2046 chip select |
 | Touch IRQ | 36 | — | XPT2046 interrupt |
-| SD MISO | 19 | — | Hardware VSPI |
-| SD MOSI | 23 | — | Hardware VSPI |
-| SD CLK | 18 | — | Hardware VSPI |
-| SD CS | 5 | — | SD chip select |
+| SD MISO | 19 | — | Hardware VSPI [SD card slot] |
+| SD MOSI | 23 | — | Hardware VSPI [SD card slot] |
+| SD CLK | 18 | — | Hardware VSPI [SD card slot] |
+| SD CS | 5 | — | SD chip select [SD card slot] |
 | Encoder CLK (A) | 35 | CLK | Input-only pin; HW-040 supplies pull-up [P3] |
 | Encoder DT (B) | 27 | DT | HW-040 supplies pull-up; free on resistive CYD variant [CN1] |
 | Encoder Button (SW) | 22 | SW | Active LOW; ESP32 internal pull-up used (HW-040 SW resistor unpopulated); long-press triggers E-Stop [CN1] |
