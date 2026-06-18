@@ -178,11 +178,10 @@ void ConsistUI::_rebuildMemberRows(lv_obj_t* list) {
 
         // Address + name
         lv_obj_t* lbl = lv_label_create(row);
-        const char* leadTag = (i == 0) ? " [L]" : "";
         if (name.isEmpty())
-            lv_label_set_text_fmt(lbl, "%d%s", m.address, leadTag);
+            lv_label_set_text_fmt(lbl, "[%s] %d", i == 0 ? "L" : String(i + 1).c_str(), m.address);
         else
-            lv_label_set_text_fmt(lbl, "%d %s%s", m.address, name.c_str(), leadTag);
+            lv_label_set_text_fmt(lbl, "[%s] %d %s", i == 0 ? "L" : String(i + 1).c_str(), m.address, name.c_str());
         lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 0, 0);
         lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
         lv_obj_set_width(lbl, 110);
@@ -282,7 +281,7 @@ void ConsistUI::_showEditor() {
     lv_obj_set_width(add_btn, LV_PCT(100));
     lv_obj_set_height(add_btn, 35);
     lv_obj_t* add_lbl = lv_label_create(add_btn);
-    lv_label_set_text(add_lbl, "+ Add Member");
+    lv_label_set_text(add_lbl, "+ Add Loco");
     lv_obj_center(add_lbl);
     lv_obj_set_user_data(add_btn, (void*)member_list);
     lv_obj_add_event_cb(add_btn, add_member_btn_cb, LV_EVENT_CLICKED, this);
