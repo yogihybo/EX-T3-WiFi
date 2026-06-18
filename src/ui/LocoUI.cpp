@@ -137,7 +137,7 @@ void LocoUI::buildSelectionMenu() {
     lv_obj_set_size(btn_consist, 200, 35);
     lv_obj_align(btn_consist, LV_ALIGN_TOP_MID, 0, 165);
     lv_obj_t* lbl_consist = lv_label_create(btn_consist);
-    lv_label_set_text(lbl_consist, "Consist");
+    lv_label_set_text(lbl_consist, "By Consist");
     lv_obj_center(lbl_consist);
     lv_obj_add_event_cb(btn_consist, consist_btn_event_cb, LV_EVENT_CLICKED, this);
 
@@ -194,19 +194,33 @@ void LocoUI::buildControlScreen() {
     lv_obj_set_user_data(prev_btn, (void*)0);
 
     lv_obj_t* addr_btn = lv_btn_create(_container);
-    lv_obj_set_size(addr_btn, 100, 40);
-    lv_obj_align(addr_btn, LV_ALIGN_TOP_MID, 0, 14);
     lv_obj_set_style_bg_opa(addr_btn, 0, 0);
     lv_obj_set_style_shadow_width(addr_btn, 0, 0);
     lv_obj_add_event_cb(addr_btn, open_selection_event_cb, LV_EVENT_CLICKED, this);
 
     _addressLabel = lv_label_create(addr_btn);
-    if (_loco.address > 0) {
+
+    if (_activeConsist) {
+        // Build "3 · 45 · 678" from all consist members
+        String addrStr;
+        for (CSConsistMember* m = _activeConsist->getFirstMember(); m; m = m->next) {
+            if (addrStr.length() > 0) addrStr += " \xE2\x80\xA2 ";  // UTF-8 bullet U+2022
+            addrStr += String(m->address);
+        }
+        lv_label_set_text(_addressLabel, addrStr.c_str());
+        lv_obj_set_style_text_font(_addressLabel, &lv_font_montserrat_16, 0);
+        lv_obj_set_size(addr_btn, 150, 40);
+    } else if (_loco.address > 0) {
         lv_label_set_text_fmt(_addressLabel, "%d", _loco.address);
+        lv_obj_set_style_text_font(_addressLabel, &lv_font_montserrat_28, 0);
+        lv_obj_set_size(addr_btn, 100, 40);
     } else {
         lv_label_set_text(_addressLabel, "None");
+        lv_obj_set_style_text_font(_addressLabel, &lv_font_montserrat_28, 0);
+        lv_obj_set_size(addr_btn, 100, 40);
     }
-    lv_obj_set_style_text_font(_addressLabel, &lv_font_montserrat_28, 0);
+
+    lv_obj_align(addr_btn, LV_ALIGN_TOP_MID, 0, 14);
     lv_obj_set_style_text_color(_addressLabel, lv_color_make(100, 100, 255), 0);
     lv_obj_center(_addressLabel);
 
