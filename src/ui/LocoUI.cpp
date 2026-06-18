@@ -217,7 +217,7 @@ void LocoUI::buildControlScreen() {
         lv_obj_set_style_pad_hor(addr_btn, 4, 0);
         lv_obj_set_size(_addressLabel, 142, LV_SIZE_CONTENT);
         lv_label_set_long_mode(_addressLabel, LV_LABEL_LONG_SCROLL_CIRCULAR);
-        lv_obj_set_style_anim_duration(_addressLabel, 8000, 0);
+        lv_obj_set_style_anim_duration(_addressLabel, 16000, 0);
         lv_label_set_recolor(_addressLabel, true);
         lv_label_set_text(_addressLabel, addrStr.c_str());
         lv_obj_set_style_text_font(_addressLabel, &lv_font_montserrat_16, 0);
@@ -305,7 +305,8 @@ void LocoUI::buildControlScreen() {
     lv_obj_center(_dirLabel);
     lv_obj_add_event_cb(_dirBtn, dir_btn_event_cb, LV_EVENT_CLICKED, this);
 
-    lv_obj_t* page_btn = lv_btn_create(_container);
+    _pageBtn = lv_btn_create(_container);
+    lv_obj_t* page_btn = _pageBtn;
     lv_obj_set_size(page_btn, 65, 38);
     lv_obj_align(page_btn, LV_ALIGN_BOTTOM_RIGHT, -2, -2);
     lv_obj_set_style_bg_color(page_btn, lv_color_hex(0x2e2e2e), 0);
@@ -450,10 +451,14 @@ void LocoUI::renderFunctionPage() {
         else        lv_obj_align(btn, LV_ALIGN_TOP_RIGHT, -2, y_pos);
     }
 
-    if (_pageBtnLabel) {
+    if (_pageBtn && _pageBtnLabel) {
         int totalPages = ((int)_fnButtons.size() + 7) / 8;
-        if (totalPages > 1) lv_label_set_text_fmt(_pageBtnLabel, "Fn %d/%d", _fnPage + 1, totalPages);
-        else                lv_label_set_text(_pageBtnLabel, "Fn");
+        if (totalPages > 1) {
+            lv_obj_clear_flag(_pageBtn, LV_OBJ_FLAG_HIDDEN);
+            lv_label_set_text_fmt(_pageBtnLabel, "Fn %d/%d", _fnPage + 1, totalPages);
+        } else {
+            lv_obj_add_flag(_pageBtn, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 }
 
@@ -533,6 +538,8 @@ void LocoUI::hideKeypad() {
 void LocoUI::refresh() {
     lv_obj_clean(_container);
     _fnButtons.clear();
+    _pageBtn = nullptr;
+    _pageBtnLabel = nullptr;
 
     if (_activeConsist) {
         // Consist is driving — keep _loco.address as set by the drive callback
