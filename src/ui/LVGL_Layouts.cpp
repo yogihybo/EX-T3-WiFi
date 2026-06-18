@@ -77,6 +77,7 @@ static void create_header_bar() {
     lv_obj_t* loco_group = lv_obj_create(header_bar);
     lv_obj_set_size(loco_group, LV_SIZE_CONTENT, LV_PCT(100));
     lv_obj_set_style_pad_all(loco_group, 0, 0);
+    lv_obj_set_style_translate_y(loco_group, -1, 0);
     lv_obj_set_style_border_width(loco_group, 0, 0);
     lv_obj_set_style_bg_opa(loco_group, 0, 0);
     lv_obj_set_flex_flow(loco_group, LV_FLEX_FLOW_ROW);
@@ -95,6 +96,7 @@ static void create_header_bar() {
     lv_label_set_text(loco_label, "000");
     lv_obj_set_style_text_font(loco_label, &lv_font_montserrat_10, 0);
     lv_obj_align(loco_label, LV_ALIGN_BOTTOM_MID, -5, 1);
+    lv_obj_set_style_translate_y(loco_label, 1, 0);
 
     cs_icon = lv_image_create(header_bar);
     lv_image_set_src(cs_icon, &dcc_icon);

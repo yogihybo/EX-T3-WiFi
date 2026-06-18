@@ -39,6 +39,7 @@ class LocoUI : public UIView {
     lv_obj_t* _speedLabel;
     lv_obj_t* _dirBtn;
     lv_obj_t* _dirLabel;
+    lv_obj_t* _pageBtn;
     lv_obj_t* _pageBtnLabel;
     lv_obj_t* _keyboard;
     lv_obj_t* _textarea;
