@@ -23,6 +23,7 @@ class Locos : public Events {
     uint16_t remove();
     void next();
     void prev();
+    uint8_t count() const { return _locos.size(); }
 };
 
 #endif

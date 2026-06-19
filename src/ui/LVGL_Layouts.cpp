@@ -1,8 +1,7 @@
 #include "LVGL_Layouts.h"
-#include "train_icon.h"
-#include "dcc_icon.h"
 
 LV_FONT_DECLARE(fa_gauge_high_16);
+LV_FONT_DECLARE(fa_icons_18);
 
 SemaphoreHandle_t lvgl_mutex = NULL;
 
@@ -14,11 +13,31 @@ lv_obj_t* acc_tab;
 lv_obj_t* pwr_tab;
 lv_obj_t* set_tab;
 
-static lv_obj_t* wifi_label;
-static lv_obj_t* cs_icon;
+static lv_obj_t* wifi_bars[4];
+static lv_obj_t* cs_bars[4];
 static lv_obj_t* power_label;
+static lv_obj_t* voltage_label;
 static lv_obj_t* loco_label;
 static lv_obj_t* train_img;
+
+static lv_obj_t* make_signal_bars(lv_obj_t* parent) {
+    lv_obj_t* cont = lv_obj_create(parent);
+    lv_obj_set_size(cont, 20, 18);
+    lv_obj_set_style_pad_all(cont, 0, 0);
+    lv_obj_set_style_border_width(cont, 0, 0);
+    lv_obj_set_style_bg_opa(cont, 0, 0);
+    lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+    static const uint8_t heights[4] = { 5, 8, 11, 14 };
+    for (int i = 0; i < 4; i++) {
+        lv_obj_t* bar = lv_obj_create(cont);
+        lv_obj_set_size(bar, 3, heights[i]);
+        lv_obj_set_pos(bar, i * 5, 18 - heights[i]);
+        lv_obj_set_style_radius(bar, 1, 0);
+        lv_obj_set_style_border_width(bar, 0, 0);
+        lv_obj_set_style_bg_color(bar, lv_color_hex(0x555555), 0);
+    }
+    return cont;
+}
 
 #include <Settings.h>
 
@@ -70,38 +89,52 @@ static void create_header_bar() {
     lv_obj_set_style_pad_all(header_bar, 0, 0);
     lv_obj_set_style_border_width(header_bar, 0, 0);
     lv_obj_set_flex_flow(header_bar, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(header_bar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(header_bar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER);
     lv_obj_clear_flag(header_bar, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_pad_column(header_bar, 15, 0);
 
     lv_obj_t* loco_group = lv_obj_create(header_bar);
     lv_obj_set_size(loco_group, LV_SIZE_CONTENT, LV_PCT(100));
     lv_obj_set_style_pad_all(loco_group, 0, 0);
-    lv_obj_set_style_translate_y(loco_group, -1, 0);
     lv_obj_set_style_border_width(loco_group, 0, 0);
     lv_obj_set_style_bg_opa(loco_group, 0, 0);
-    lv_obj_set_flex_flow(loco_group, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(loco_group, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(loco_group, 0, 0);
+    lv_obj_set_flex_flow(loco_group, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(loco_group, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(loco_group, 0, 0);
     lv_obj_clear_flag(loco_group, LV_OBJ_FLAG_SCROLLABLE);
 
-    train_img = lv_image_create(loco_group);
-    lv_image_set_src(train_img, &train_icon);
+    train_img = lv_label_create(loco_group);
+    lv_label_set_text(train_img, "\xEF\x88\xB8");  // U+F238 fa-train
+    lv_obj_set_style_text_font(train_img, &fa_icons_18, 0);
+    lv_obj_set_style_text_color(train_img, lv_color_hex(0xcccccc), 0);
     lv_obj_set_style_pad_left(train_img, 10, 0);
-    bool is_dark = (Settings.theme == SettingsClass::Theme::DARK);
-    lv_obj_set_style_image_recolor_opa(train_img, LV_OPA_COVER, 0);
-    lv_obj_set_style_image_recolor(train_img, is_dark ? lv_color_make(255, 255, 255) : lv_color_make(0, 0, 0), 0);
+    lv_obj_set_style_transform_scale(train_img, 161, 0);  // 63% of original
+    lv_obj_set_style_transform_pivot_x(train_img, 0, 0);
+    lv_obj_set_style_transform_pivot_y(train_img, 9, 0);  // pivot at centre of 18px line-height
+    lv_obj_set_style_translate_y(train_img, -2, 0);       // nudge up slightly
 
-    loco_label = lv_label_create(train_img);
+    loco_label = lv_label_create(loco_group);
     lv_label_set_text(loco_label, "000");
     lv_obj_set_style_text_font(loco_label, &lv_font_montserrat_10, 0);
-    lv_obj_align(loco_label, LV_ALIGN_BOTTOM_MID, -5, 1);
-    lv_obj_set_style_translate_y(loco_label, 1, 0);
+    lv_obj_set_style_text_color(loco_label, lv_color_hex(0x999999), 0);
 
-    cs_icon = lv_image_create(header_bar);
-    lv_image_set_src(cs_icon, &dcc_icon);
-    lv_obj_set_style_image_recolor_opa(cs_icon, LV_OPA_COVER, 0);
-    lv_obj_set_style_image_recolor(cs_icon, lv_color_make(255, 0, 0), 0);
+    // CS signal bars + "DCC" label stacked in a column
+    lv_obj_t* cs_group = lv_obj_create(header_bar);
+    lv_obj_set_size(cs_group, LV_SIZE_CONTENT, LV_PCT(100));
+    lv_obj_set_style_pad_all(cs_group, 0, 0);
+    lv_obj_set_style_border_width(cs_group, 0, 0);
+    lv_obj_set_style_bg_opa(cs_group, 0, 0);
+    lv_obj_set_flex_flow(cs_group, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(cs_group, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(cs_group, 0, 0);
+    lv_obj_clear_flag(cs_group, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* cs_cont = make_signal_bars(cs_group);
+    for (int i = 0; i < 4; i++) cs_bars[i] = lv_obj_get_child(cs_cont, i);
+    lv_obj_t* cs_lbl = lv_label_create(cs_group);
+    lv_label_set_text(cs_lbl, "DCC");
+    lv_obj_set_style_text_font(cs_lbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(cs_lbl, lv_color_hex(0x999999), 0);
 
     lv_obj_t* spacer = lv_obj_create(header_bar);
     lv_obj_set_height(spacer, 0);
@@ -109,13 +142,45 @@ static void create_header_bar() {
     lv_obj_set_style_border_width(spacer, 0, 0);
     lv_obj_set_flex_grow(spacer, 1);
 
-    wifi_label = lv_label_create(header_bar);
-    lv_label_set_text(wifi_label, LV_SYMBOL_WIFI);
-    lv_obj_set_style_text_color(wifi_label, lv_color_make(255, 0, 0), 0);
+    // WiFi signal bars + "WiFi" label stacked in a column
+    lv_obj_t* wifi_group = lv_obj_create(header_bar);
+    lv_obj_set_size(wifi_group, LV_SIZE_CONTENT, LV_PCT(100));
+    lv_obj_set_style_pad_all(wifi_group, 0, 0);
+    lv_obj_set_style_border_width(wifi_group, 0, 0);
+    lv_obj_set_style_bg_opa(wifi_group, 0, 0);
+    lv_obj_set_flex_flow(wifi_group, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(wifi_group, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(wifi_group, 0, 0);
+    lv_obj_clear_flag(wifi_group, LV_OBJ_FLAG_SCROLLABLE);
 
-    power_label = lv_label_create(header_bar);
-    lv_label_set_text(power_label, LV_SYMBOL_BATTERY_FULL " --");
-    lv_obj_set_style_pad_right(power_label, 10, 0);
+    lv_obj_t* wifi_cont = make_signal_bars(wifi_group);
+    for (int i = 0; i < 4; i++) wifi_bars[i] = lv_obj_get_child(wifi_cont, i);
+    lv_obj_t* wifi_lbl = lv_label_create(wifi_group);
+    lv_label_set_text(wifi_lbl, "WiFi");
+    lv_obj_set_style_text_font(wifi_lbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(wifi_lbl, lv_color_hex(0x999999), 0);
+
+    // Battery icon + voltage label stacked in a column
+    lv_obj_t* pwr_group = lv_obj_create(header_bar);
+    lv_obj_set_size(pwr_group, LV_SIZE_CONTENT, LV_PCT(100));
+    lv_obj_set_style_pad_all(pwr_group, 0, 0);
+    lv_obj_set_style_pad_right(pwr_group, 8, 0);
+    lv_obj_set_style_border_width(pwr_group, 0, 0);
+    lv_obj_set_style_bg_opa(pwr_group, 0, 0);
+    lv_obj_set_flex_flow(pwr_group, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(pwr_group, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(pwr_group, 0, 0);
+    lv_obj_clear_flag(pwr_group, LV_OBJ_FLAG_SCROLLABLE);
+
+    power_label = lv_label_create(pwr_group);
+    lv_label_set_text(power_label, LV_SYMBOL_BATTERY_FULL);
+    lv_obj_set_style_text_font(power_label, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_color(power_label, lv_color_hex(0xcccccc), 0);
+
+    voltage_label = lv_label_create(pwr_group);
+    lv_label_set_text(voltage_label, "--");
+    lv_obj_set_style_text_font(voltage_label, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(voltage_label, lv_color_hex(0x999999), 0);
 }
 
 // Destroys and recreates the header bar so it picks up the current theme.
@@ -123,11 +188,11 @@ void rebuild_header_bar() {
     if (header_bar) {
         lv_obj_del(header_bar);
         header_bar  = nullptr;
-        wifi_label  = nullptr;
-        cs_icon     = nullptr;
-        power_label = nullptr;
-        loco_label  = nullptr;
+        power_label   = nullptr;
+        voltage_label = nullptr;
+        loco_label    = nullptr;
         train_img   = nullptr;
+        for (int i = 0; i < 4; i++) wifi_bars[i] = cs_bars[i] = nullptr;
     }
     create_header_bar();
 }
@@ -157,9 +222,13 @@ void create_main_ui() {
     lv_obj_set_width(main_tabview, LV_PCT(100));
     lv_obj_set_flex_grow(main_tabview, 1); // Fills remaining vertical space
     
-    // Remove padding to allow views to fill it seamlessly
     lv_obj_t* tab_btns = lv_tabview_get_tab_bar(main_tabview);
     lv_obj_set_style_pad_all(tab_btns, 0, 0);
+    lv_obj_set_style_bg_color(tab_btns, lv_color_hex(0x1a1a1a), 0);
+    lv_obj_set_style_border_width(tab_btns, 0, 0);
+    lv_obj_set_style_border_side(tab_btns, LV_BORDER_SIDE_TOP, 0);
+    lv_obj_set_style_border_color(tab_btns, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_border_width(tab_btns, 1, 0);
 
     // UTF-8 for U+F625 gauge-high, U+F074 shuffle, U+F0E7 bolt, U+F013 gear
     loco_tab = lv_tabview_add_tab(main_tabview, "\xEF\x98\xA5 Loco");
@@ -168,6 +237,33 @@ void create_main_ui() {
     set_tab  = lv_tabview_add_tab(main_tabview, "\xEF\x80\x93 Set");
 
     lv_obj_set_style_text_font(tab_btns, &fa_gauge_high_16, 0);
+
+    // Style individual tab buttons: grey inactive, blue active
+    uint32_t tab_count = lv_obj_get_child_cnt(tab_btns);
+    for (uint32_t i = 0; i < tab_count; i++) {
+        lv_obj_t* btn = lv_obj_get_child(tab_btns, i);
+        // Lock all padding for both states so the theme can't shift content on activation
+        lv_obj_set_style_pad_top(btn,    2, 0);
+        lv_obj_set_style_pad_bottom(btn, 0, 0);
+        lv_obj_set_style_pad_left(btn,   0, 0);
+        lv_obj_set_style_pad_right(btn,  0, 0);
+        lv_obj_set_style_pad_top(btn,    2, LV_STATE_CHECKED);
+        lv_obj_set_style_pad_bottom(btn, 0, LV_STATE_CHECKED);
+        lv_obj_set_style_pad_left(btn,   0, LV_STATE_CHECKED);
+        lv_obj_set_style_pad_right(btn,  0, LV_STATE_CHECKED);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a1a1a), 0);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a1a1a), LV_STATE_CHECKED);
+        lv_obj_set_style_text_color(btn, lv_color_hex(0x666666), 0);
+        lv_obj_set_style_text_color(btn, lv_color_hex(0x4488ff), LV_STATE_CHECKED);
+        lv_obj_set_style_border_width(btn, 2, 0);
+        lv_obj_set_style_border_width(btn, 2, LV_STATE_CHECKED);
+        lv_obj_set_style_border_side(btn, LV_BORDER_SIDE_TOP, 0);
+        lv_obj_set_style_border_side(btn, LV_BORDER_SIDE_TOP, LV_STATE_CHECKED);
+        lv_obj_set_style_border_color(btn, lv_color_hex(0x333333), 0);
+        lv_obj_set_style_border_color(btn, lv_color_hex(0x4488ff), LV_STATE_CHECKED);
+        lv_obj_set_style_shadow_width(btn, 0, 0);
+        lv_obj_set_style_shadow_width(btn, 0, LV_STATE_CHECKED);
+    }
 
     lv_obj_set_style_pad_all(loco_tab, 0, 0);
     lv_obj_set_style_pad_all(acc_tab,  0, 0);
@@ -179,37 +275,38 @@ void set_header_loco_count(int count) {
     if (loco_label) lv_label_set_text_fmt(loco_label, "%03d", count);
 }
 
+static void fill_bars(lv_obj_t* bars[4], int level, lv_color_t on_color) {
+    for (int i = 0; i < 4; i++)
+        if (bars[i]) lv_obj_set_style_bg_color(bars[i], i < level ? on_color : lv_color_hex(0x555555), 0);
+}
+
 void set_header_wifi_status(bool connected, int rssi) {
-    if (wifi_label) {
-        lv_label_set_text(wifi_label, LV_SYMBOL_WIFI);
-        if (!connected) {
-            lv_obj_set_style_text_color(wifi_label, lv_color_make(255, 0, 0), 0);
-        } else {
-            if (rssi > -60) lv_obj_set_style_text_color(wifi_label, lv_color_make(50, 255, 50), 0);
-            else if (rssi > -80) lv_obj_set_style_text_color(wifi_label, lv_color_make(255, 255, 50), 0);
-            else lv_obj_set_style_text_color(wifi_label, lv_color_make(255, 50, 50), 0);
-        }
+    int level = 0;
+    if (connected) {
+        if      (rssi > -60) level = 4;
+        else if (rssi > -70) level = 3;
+        else if (rssi > -80) level = 2;
+        else                 level = 1;
     }
+    fill_bars(wifi_bars, level, lv_color_hex(0xcccccc));
 }
 
 void set_header_cs_status(bool connected) {
-    if (cs_icon) {
-        lv_obj_set_style_image_recolor(cs_icon, connected ? lv_color_make(0, 255, 0) : lv_color_make(255, 0, 0), 0);
-    }
+    fill_bars(cs_bars, connected ? 4 : 0, lv_color_hex(0xcccccc));
 }
 
 void set_header_power_status(float voltage) {
     if (power_label) {
         const char* sym = LV_SYMBOL_BATTERY_EMPTY;
-        lv_color_t col = lv_color_make(255, 80, 80); // red — critically low
-        if (voltage >= 4.10) { sym = LV_SYMBOL_BATTERY_FULL; col = lv_color_make(80, 220, 80);  }
-        else if (voltage >= 3.90) { sym = LV_SYMBOL_BATTERY_3; col = lv_color_make(150, 220, 80); }
-        else if (voltage >= 3.75) { sym = LV_SYMBOL_BATTERY_2; col = lv_color_make(220, 220, 80); }
-        else if (voltage >= 3.60) { sym = LV_SYMBOL_BATTERY_1; col = lv_color_make(220, 140, 40); }
-
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%s %.2fV", sym, voltage);
-        lv_label_set_text(power_label, buf);
-        lv_obj_set_style_text_color(power_label, col, 0);
+        if      (voltage >= 4.10) sym = LV_SYMBOL_BATTERY_FULL;
+        else if (voltage >= 3.90) sym = LV_SYMBOL_BATTERY_3;
+        else if (voltage >= 3.75) sym = LV_SYMBOL_BATTERY_2;
+        else if (voltage >= 3.60) sym = LV_SYMBOL_BATTERY_1;
+        lv_label_set_text(power_label, sym);
+    }
+    if (voltage_label) {
+        char buf[8];
+        snprintf(buf, sizeof(buf), "%.2fV", voltage);
+        lv_label_set_text(voltage_label, buf);
     }
 }
