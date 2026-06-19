@@ -224,6 +224,8 @@ void create_main_ui() {
     lv_obj_set_width(main_tabview, LV_PCT(100));
     lv_obj_set_flex_grow(main_tabview, 1); // Fills remaining vertical space
     
+    lv_obj_clear_flag(lv_tabview_get_content(main_tabview), LV_OBJ_FLAG_SCROLLABLE);
+
     lv_obj_t* tab_btns = lv_tabview_get_tab_bar(main_tabview);
     lv_obj_set_style_pad_all(tab_btns, 0, 0);
     lv_obj_set_style_bg_color(tab_btns, lv_color_hex(0x1a1a1a), 0);

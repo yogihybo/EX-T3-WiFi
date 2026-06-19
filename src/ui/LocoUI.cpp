@@ -337,7 +337,7 @@ void LocoUI::buildControlScreen() {
     // Direction toggle — FWD label | switch | REV label
     lv_obj_t* dir_row = lv_obj_create(_container);
     lv_obj_set_size(dir_row, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_align(dir_row, LV_ALIGN_BOTTOM_MID, 0, -12);
+    lv_obj_align(dir_row, LV_ALIGN_BOTTOM_MID, 0, -19);
     lv_obj_set_style_bg_opa(dir_row, 0, 0);
     lv_obj_set_style_border_width(dir_row, 0, 0);
     lv_obj_set_style_pad_all(dir_row, 0, 0);
@@ -600,10 +600,17 @@ void LocoUI::refresh() {
     _nextBtn = nullptr;
 
     if (_activeConsist) {
-        // Consist is driving — keep _loco.address as set by the drive callback
-        buildControlScreen();
-        buildSelectionMenu();
-        return;
+        uint16_t newAddr = (uint16_t)_locos;
+        if (newAddr == _loco.address) {
+            // Still on the consist's slot — keep driving
+            buildControlScreen();
+            buildSelectionMenu();
+            return;
+        }
+        // Navigated away — release the consist
+        _dccex.setThrottle(_activeConsist, 0, Direction::Forward);
+        _dccex.deleteCSConsist(_activeConsist);
+        _activeConsist = nullptr;
     }
 
     uint16_t newAddr = (uint16_t)_locos;
@@ -924,6 +931,7 @@ void LocoUI::consist_btn_event_cb(lv_event_t* e) {
         ui->_locoName = name;
         CSConsistMember* lead = consist->getFirstMember();
         ui->_loco.address = lead ? lead->address : 0;
+        ui->_locos.add(ui->_loco.address);
         Serial.printf("[DCC] Consist '%s' acquired (lead %d)\n", name.c_str(), ui->_loco.address);
         lv_async_call([](void* user_data) { ((LocoUI*)user_data)->refresh(); }, ui);
     });
