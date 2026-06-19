@@ -35,10 +35,13 @@ class LocoUI : public UIView {
 
     String _locoName;
 
+    lv_obj_t* _prevBtn;
+    lv_obj_t* _nextBtn;
     lv_obj_t* _speedArc;
     lv_obj_t* _speedLabel;
-    lv_obj_t* _dirBtn;
-    lv_obj_t* _dirLabel;
+    lv_obj_t* _dirBtn;      // lv_switch
+    lv_obj_t* _dirFwdLabel;
+    lv_obj_t* _dirRevLabel;
     lv_obj_t* _pageBtn;
     lv_obj_t* _pageBtnLabel;
     lv_obj_t* _keyboard;
