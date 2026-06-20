@@ -1,4 +1,5 @@
 import FnEditor from "./fn.editor.js";
+import { FN_DEFAULTS } from './fn-defaults.js';
 
 const Modal = {
   components: {
@@ -12,8 +13,8 @@ const Modal = {
     return {
       address: '',
       name: '',
-      fns: '/default.json',
-      editor: [],
+      fns: 'builtin:0',
+      editor: null,
     }
   },
   emits: ['close', 'update', 'del'],
@@ -29,10 +30,14 @@ const Modal = {
             this.address = this.loco.file.match(/(\d+)/i)?.[0] || '';
             this.name = name;
             if (Array.isArray(functions)) {
-              this.fns = 'custom';
+              this.fns    = 'custom';
               this.editor = functions;
+            } else if (!functions || functions === '/default.json') {
+              this.fns    = 'builtin:0';
+              this.editor = null;
             } else {
-              this.fns = functions;
+              this.fns    = functions;
+              this.editor = null;
             }
           }
         }
@@ -40,9 +45,8 @@ const Modal = {
     }
   },
   computed: {
-    custom() {
-      return this.fns === 'custom';
-    }
+    custom() { return this.fns === 'custom'; },
+    fnDefaults() { return FN_DEFAULTS; },
   },
   methods: {
     validAddress({ target }) {
@@ -53,11 +57,14 @@ const Modal = {
         target.setCustomValidity('');
       }
     },
+    onFnsChange() {
+      if (this.fns === 'custom' && this.editor === null) this.editor = [];
+    },
     close() {
       this.address = '';
-      this.name = '';
-      this.fns = '/default.json';
-      this.editor = [];
+      this.name    = '';
+      this.fns     = 'builtin:0';
+      this.editor  = null;
 
       this.$emit('close');
     },
@@ -70,7 +77,11 @@ const Modal = {
           },
           body: JSON.stringify({
             name: this.name,
-            functions: this.fns !== 'custom' ? this.fns : this.editor,
+            functions: this.fns === 'custom'
+              ? this.editor
+              : this.fns.startsWith('builtin:')
+                ? FN_DEFAULTS[parseInt(this.fns.split(':')[1])].functions
+                : this.fns,
           })
         });
         
@@ -117,7 +128,7 @@ const Modal = {
               </div>
               <div class="col-12 col-md-5 pe-0">
                 <div class="form-floating">
-                  <select v-model="fns" class="form-select" required>
+                  <select v-model="fns" @change="onFnsChange" class="form-select" required>
                     <option v-for="{ name, file } in functions" :value="file">{{ name }}</option>
                   </select>
                   <label>Loco Functions</label>
@@ -126,7 +137,7 @@ const Modal = {
             </div>
             <div class="row">
               <div class="col">
-                <FnEditor v-model="editor" v-show="custom" class="mt-3" />
+                <FnEditor v-if="custom && editor !== null" v-model="editor" class="mt-3" />
               </div>
             </div>
           </div>
@@ -165,14 +176,14 @@ export default {
       locos: [],
       isLoading: false,
       functions: [
-        { file: '/default.json', name: 'Default Functions 0-28' },
-        { file: 'custom', name: 'Custom Functions' }
+        ...FN_DEFAULTS.map((d, i) => ({ file: `builtin:${i}`, name: d.name })),
+        { file: 'custom', name: 'Custom Functions' },
       ],
     }
   },
   computed: {
     sorted() {
-      return this.locos.sort((a, b) => (a.file.match(/(\d+)/)?.[0] || 0) - (b.file.match(/(\d+)/)?.[0] || 0));
+      return [...this.locos].sort((a, b) => (a.file.match(/(\d+)/)?.[0] || 0) - (b.file.match(/(\d+)/)?.[0] || 0));
     }
   },
   methods: {
@@ -185,7 +196,8 @@ export default {
       }
       {
         const response = await fetch('/fns');
-        this.functions = this.functions.slice(0, 2).concat(await response.json());
+        const builtins = FN_DEFAULTS.map((d, i) => ({ file: `builtin:${i}`, name: d.name }));
+        this.functions = [...builtins, { file: 'custom', name: 'Custom Functions' }, ...await response.json()];
       }
     },
     add() {
@@ -202,11 +214,11 @@ export default {
         }
       }
     },
-    update(loco) {
+    onLocoSaved(loco) {
       const existing = this.locos.findIndex(({ file })=> file === loco.file);
-      if (existing !== -1) { // Change existing
+      if (existing !== -1) {
         this.locos[existing].name = loco.name;
-      } else { // Add new
+      } else {
         this.locos.push(loco);
       }
     },
@@ -254,7 +266,7 @@ export default {
         </ul>
       </div>
     </div>
-    <Modal v-if="save" :functions="functions" :loco="save" @close="save = false" @update="update" @del="del" />
+    <Modal v-if="save" :functions="functions" :loco="save" @close="save = false" @update="onLocoSaved" @del="del" />
   </div>
   `
 }

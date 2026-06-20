@@ -426,9 +426,26 @@ void LocoUI::buildFunctionButtons(JsonDocument& locoDoc) {
             lv_obj_set_style_shadow_color(btn, lv_color_hex(0x000000), 0);
             lv_obj_set_style_shadow_opa(btn, LV_OPA_40, 0);
             lv_obj_set_style_bg_color(btn, press_fill, LV_STATE_CHECKED);
-            lv_obj_set_style_border_color(btn, press_border, LV_STATE_CHECKED);
+            lv_obj_set_style_border_color(btn, press_color, LV_STATE_CHECKED);
 
-            if (latching) lv_obj_add_flag(btn, LV_OBJ_FLAG_CHECKABLE);
+            if (latching) {
+                lv_obj_add_flag(btn, LV_OBJ_FLAG_CHECKABLE);
+            } else {
+                lv_obj_set_style_bg_color(btn, press_fill, LV_STATE_PRESSED);
+                lv_obj_set_style_border_color(btn, press_color, LV_STATE_PRESSED);
+                auto swap_icons = [](lv_event_t* e) {
+                    lv_obj_t* b = (lv_obj_t*)lv_event_get_target(e);
+                    if (lv_obj_get_child_cnt(b) < 2) return;
+                    bool pressing = (lv_event_get_code(e) == LV_EVENT_PRESSED);
+                    lv_obj_t* show = lv_obj_get_child(b, pressing ? 1 : 0);
+                    lv_obj_t* hide = lv_obj_get_child(b, pressing ? 0 : 1);
+                    lv_obj_clear_flag(show, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_add_flag(hide, LV_OBJ_FLAG_HIDDEN);
+                };
+                lv_obj_add_event_cb(btn, swap_icons, LV_EVENT_PRESSED,    nullptr);
+                lv_obj_add_event_cb(btn, swap_icons, LV_EVENT_RELEASED,   nullptr);
+                lv_obj_add_event_cb(btn, swap_icons, LV_EVENT_PRESS_LOST, nullptr);
+            }
 
             auto create_visual = [btn, func](uint32_t cp, const char* label, lv_color_t col) -> lv_obj_t* {
                 lv_obj_t* visual_obj = lv_label_create(btn);

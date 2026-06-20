@@ -362,22 +362,25 @@ export default {
   props: { modelValue: Array },
   emits: ['update:modelValue'],
   watch: {
-    modelValue(value) {
-      if (!value.length && this.mutatedModel.length) {
-        this.mutatedModel = [];
-      } else if (!this.mutatedModel.length) {
-        if (value.length === 0) {
-          this.mutatedModel = [this.createFunction()];
-        } else {
-          this.mutatedModel = value.map(row => {
-            row.forEach(btn => {
-              if (typeof btn === 'object' && !btn.key) btn.key = rand();
+    modelValue: {
+      immediate: true,
+      handler(value) {
+        if (!value.length && this.mutatedModel.length) {
+          this.mutatedModel = [];
+        } else if (!this.mutatedModel.length) {
+          if (value.length === 0) {
+            this.mutatedModel = [this.createFunction()];
+          } else {
+            this.mutatedModel = value.map(row => {
+              row.forEach(btn => {
+                if (typeof btn === 'object' && !btn.key) btn.key = rand();
+              });
+              if (!Number.isInteger(row.at(-1))) row.push(rand());
+              return row;
             });
-            if (!Number.isInteger(row.at(-1))) row.push(rand());
-            return row;
-          });
+          }
         }
-      }
+      },
     },
     mutatedModel: {
       handler(value) {

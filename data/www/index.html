@@ -5,7 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="/bs.min.css" rel="stylesheet" />
     <link href="/fn.editor.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="/fa-icons.css" />
+    <style>
+      @font-face {
+        font-family: 'Font Awesome 6 Pro';
+        font-style: normal;
+        font-weight: 900;
+        src: url('/fa-solid-subset.woff2') format('woff2');
+      }
+      .fa-solid, .fas {
+        font-family: 'Font Awesome 6 Pro';
+        font-weight: 900;
+        font-style: normal;
+        -webkit-font-smoothing: antialiased;
+        display: inline-block;
+      }
+    </style>
     <title>DCC-EX-CYD</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230d6efd'/%3E%3Ctext x='8' y='12' text-anchor='middle' font-size='11' font-family='sans-serif' fill='white' font-weight='bold'%3ET%3C/text%3E%3C/svg%3E" />
     <style>
@@ -317,25 +332,62 @@
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: var(--radius);
+        gap: 0.5rem;
       }
       .app-title {
         font-weight: 700;
         font-size: 0.95rem;
         color: var(--text);
         letter-spacing: 0.06em;
+        flex-shrink: 0;
       }
-      .cs-dot {
-        width: 10px;
-        height: 10px;
+      .header-status {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .status-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 2rem;
+        padding: 0.2rem 0.55rem;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+      }
+      .status-pill .dot {
+        width: 7px;
+        height: 7px;
         border-radius: 50%;
-        background: var(--danger);
-        box-shadow: 0 0 0 3px rgba(220,38,38,.25);
+        flex-shrink: 0;
+        background: var(--text-muted);
         transition: background var(--transition), box-shadow var(--transition);
       }
-      .cs-dot.connected {
+      .status-pill .dot.ok {
         background: var(--success);
-        box-shadow: 0 0 0 3px rgba(22,163,74,.25);
+        box-shadow: 0 0 0 2px rgba(22,163,74,.2);
       }
+      .status-pill .dot.err {
+        background: var(--danger);
+        box-shadow: 0 0 0 2px rgba(220,38,38,.2);
+      }
+      .status-pill .status-label {
+        color: var(--text-muted);
+        font-weight: 600;
+        letter-spacing: 0.04em;
+      }
+      .status-pill .status-value {
+        color: var(--text);
+        font-family: monospace;
+        font-size: 0.68rem;
+      }
+      /* legacy – keep for anything that may reference it */
+      .cs-dot { display: none; }
 
       /* ── Tab button icon+label layout ────────────────────────────────────── */
       .nav-tabs .tab-btn {
@@ -407,7 +459,18 @@
     <div class="container py-2" id="app">
       <div class="app-header">
         <span class="app-title">DCC-EX-CYD</span>
-        <span class="cs-dot" :class="{ connected: csConnected }" :title="csConnected ? 'Command Station Connected' : 'Command Station Not Connected'"></span>
+        <div class="header-status">
+          <div class="status-pill" title="Throttle device IP address">
+            <span class="dot ok"></span>
+            <span class="status-label">Throttle</span>
+            <span class="status-value">{{ throttleIp || '—' }}</span>
+          </div>
+          <div class="status-pill" :title="csConnected ? 'Command station connected at ' + csServer : 'Command station not connected'">
+            <span class="dot" :class="csConnected ? 'ok' : 'err'"></span>
+            <span class="status-label">CS</span>
+            <span class="status-value">{{ csServer || '—' }}</span>
+          </div>
+        </div>
       </div>
       <div class="nav nav-tabs justify-content-center mb-3">
         <button type="button" class="nav-link tab-btn" :class="{ active: tab === 1, disabled: locked }" @click="tab = 1">
@@ -481,15 +544,19 @@
             locked: false,
             cs: true,
             csConnected: false,
+            throttleIp: '',
+            csServer: '',
           }
         },
         async mounted() {
-          // Check if CS settings are configured (drives the ! badge)
+          // Check if CS settings are configured (drives the ! badge) and populate header info
           try {
             const response = await fetch('/cs', { method: 'GET', cache: 'no-store' });
             if (response.ok) {
               const data = await response.json();
               if (!data.ssid || !data.server || !data.port) this.cs = false;
+              if (data.ip)     this.throttleIp = data.ip;
+              if (data.server) this.csServer   = data.server + (data.port ? ':' + data.port : '');
             } else {
               this.cs = false;
             }

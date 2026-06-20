@@ -28,8 +28,12 @@ The interface is split into four primary tabs anchored to the bottom of the scre
 </p>
 A web interface running on the ESP32 allows for easy input of loco details and assigning functions. To enable editting in the web interface, the 'Throttle Programming' mode must be selected on the device screen first.
 
-- **Locos**: Add, edit, and delete locomotives by DCC address and name. Assign a default function set (F0–F9), a saved custom set, or define functions inline with the function editor.
-- **Function Sets**: Create reusable function sets with per-button label, colour, latching mode, and icon. Rows can be reordered by drag and drop.
+- **Locos**: Add, edit, and delete locomotives by DCC address and name. Assign one of the two built-in default function sets (Basic F0–F8 or Extended F0–F15), a saved custom set, or define functions inline with the function editor.
+- **Function Sets**: Create reusable function sets with per-button label, colour, latching mode, and icon. Rows can be reordered by drag and drop. Two built-in read-only defaults are included (shown with a lock badge):
+  - **Default — Basic (F0–F8)**: Headlights, Bell, Horn, Dynamic Brake, Ditch Lights, Cab Light, Strobe, Coupler, Mute. Horn, Coupler are momentary; all others latching.
+  - **Default — Extended (F0–F15)**: Extends Basic with Cooling Fan, Prime Mover, Air Compressor, Brake Squeal, Smoke Unit, Firebox, and Injector. Brake Squeal is momentary.
+  
+  Built-in sets cannot be edited or deleted. Use the **Copy** button to duplicate one into an editable custom set.
 - **Groups**: Organise locos into named groups for quick selection on the throttle. Groups and their members can be reordered by drag and drop.
 - **Consists**: Create and manage multi-loco consists. Add members by typing a DCC address directly or selecting from the throttle loco roster. Drag rows to reorder — the first loco (marked **L**) becomes the lead. Each member has a direction toggle (green = forward, yellow = reversed) to set its orientation within the consist. Unknown locos can be named inline. Optionally replicate function button presses to all members. Consists are saved to flash or SD and can be driven or edited directly from the device throttle screen.
 - **Icons**: Shows the standard function icons plus the ability to import custom icons
@@ -115,7 +119,7 @@ A native LVGL container system for the UI.
 ### 3. Loco Control (`LocoUI.cpp`)
 The primary dashboard for driving locomotives and consists.
 - **Throttle**: Features an `lv_arc` serving as a dynamic rotary speedometer. Speed updates from the CS are accepted unless a local change was made within the last 500 ms (preventing CS echo fighting user input).
-- **Function Mapping**: Parses `[address].json` files from LittleFS/SD to dynamically generate up to 6 function buttons per page, specific to the active locomotive. A default set (F0–F9) is shown for unrecognised locos. Each button supports idle and pressed visual states (label, icon, colour) defined per-function in the JSON.
+- **Function Mapping**: Parses `[address].json` files from LittleFS/SD to dynamically generate up to 6 function buttons per page, specific to the active locomotive. Each button supports idle and pressed visual states (label, icon, colour) defined per-function in the JSON. Latching buttons toggle on each press; momentary buttons animate on press and release independently of the DCC function state roundtrip.
 - **Selection Menu**: Tapping the active address opens a dark-themed overlay panel with options to select a locomotive by address (numeric keypad), by name (roster list), by group, or by consist. A Release button stops and deregisters the current loco or consist.
 - **Direction / E-Stop**: Instant DCC directional toggle (blocked at speed > 0) and a prominent circular emergency stop button.
 - **Consist Mode**: When a consist is active all throttle controls (speed arc, encoder, direction, functions, e-stop) are routed through the DCC-EX consist API. The consist name is shown in place of the loco name.

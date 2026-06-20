@@ -10,3 +10,5 @@ sd
 sdkconfig
 __pycache__/
 *.pyc
+src/fonts/Font Awesome 6 Pro-Solid-900.otf
+src/fonts/fa-pro-solid-900.ttf
