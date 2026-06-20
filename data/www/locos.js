@@ -77,11 +77,7 @@ const Modal = {
           },
           body: JSON.stringify({
             name: this.name,
-            functions: this.fns === 'custom'
-              ? this.editor
-              : this.fns.startsWith('builtin:')
-                ? FN_DEFAULTS[parseInt(this.fns.split(':')[1])].functions
-                : this.fns,
+            functions: this.fns === 'custom' ? this.editor : this.fns,
           })
         });
         

@@ -1,4 +1,4 @@
-// FA6 Pro-solid codepoints compiled into fa_icons_18 on the device
+// FA6 Solid codepoints compiled into fa_icons_18 on the device
 export const FA_ICONS = [
   // Lighting
   { icon: 'lightbulb',              label: 'Light',        cp: 0xf0eb },
