@@ -138,7 +138,7 @@ void PowerUI::updateStyles() {
         _mainOn ? lv_color_make(76, 175, 80) : lv_color_make(180, 50, 50), 0);
     lv_label_set_text(_lbl_main_status, _mainOn ? "ON" : "OFF");
     lv_obj_set_style_text_color(_lbl_main_status,
-        _mainOn ? lv_color_make(76, 175, 80) : lv_color_hex(0x888888), 0);
+        _mainOn ? lv_color_make(76, 175, 80) : lv_color_make(180, 50, 50), 0);
 
     lv_obj_set_style_bg_color(_btn_prog_on,
         _progOn ? lv_color_make(40, 140, 40) : lv_color_hex(0x2e2e2e), 0);
@@ -149,7 +149,7 @@ void PowerUI::updateStyles() {
         _progOn ? lv_color_make(76, 175, 80) : lv_color_make(180, 50, 50), 0);
     lv_label_set_text(_lbl_prog_status, _progOn ? "ON" : "OFF");
     lv_obj_set_style_text_color(_lbl_prog_status,
-        _progOn ? lv_color_make(76, 175, 80) : lv_color_hex(0x888888), 0);
+        _progOn ? lv_color_make(76, 175, 80) : lv_color_make(180, 50, 50), 0);
 
     lv_obj_set_style_bg_color(_btn_all_on,
         (_mainOn && _progOn) ? lv_color_make(40, 140, 40) : lv_color_hex(0x2e2e2e), 0);

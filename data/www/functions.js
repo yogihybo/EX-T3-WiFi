@@ -173,7 +173,7 @@ export default {
                 <a class="btn btn-link p-0 d-flex align-items-center" :href="fn.file" download title="Download function config">
                   <svg width="16" height="16" fill="currentColor"><use xlink:href="bs.icons.svg#download"/></svg>
                 </a>
-                <button @click="del(fn)" class="btn btn-link p-0 d-flex align-items-center" title="Delete function set">
+                <button @click="del(fn)" class="btn btn-link p-0 d-flex align-items-center text-danger" title="Delete function set">
                   <svg width="16" height="16" fill="currentColor"><use xlink:href="bs.icons.svg#trash"/></svg>
                 </button>
               </div>

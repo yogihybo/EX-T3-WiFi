@@ -234,7 +234,7 @@ export default {
                 <a class="btn btn-link p-0 d-flex align-items-center" :href="loco.file" download title="Download loco config">
                   <svg width="16" height="16" fill="currentColor"><use xlink:href="bs.icons.svg#download"/></svg>
                 </a>
-                <button @click="del(loco)" type="button" class="btn btn-link p-0 d-flex align-items-center" title="Delete loco">
+                <button @click="del(loco)" type="button" class="btn btn-link p-0 d-flex align-items-center text-danger" title="Delete loco">
                   <svg width="16" height="16" fill="currentColor"><use xlink:href="bs.icons.svg#trash"/></svg>
                 </button>
               </div>

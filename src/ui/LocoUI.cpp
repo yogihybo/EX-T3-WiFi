@@ -105,74 +105,58 @@ void LocoUI::onLocoUpdate(Loco* loco) {
 
 void LocoUI::buildSelectionMenu() {
     _selectionMenu = lv_obj_create(_container);
-    lv_obj_set_size(_selectionMenu, LV_PCT(90), LV_PCT(98));
+    lv_obj_set_size(_selectionMenu, LV_PCT(90), LV_PCT(95));
     lv_obj_align(_selectionMenu, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_pad_all(_selectionMenu, 0, 0);
-    lv_obj_set_style_border_width(_selectionMenu, 0, 0);
-    lv_obj_set_style_radius(_selectionMenu, 12, 0);
-    lv_obj_set_style_shadow_width(_selectionMenu, 30, 0);
-    lv_obj_set_style_shadow_opa(_selectionMenu, LV_OPA_50, 0);
+    lv_obj_set_style_bg_color(_selectionMenu, lv_color_hex(0x1e1e1e), 0);
+    lv_obj_set_style_border_color(_selectionMenu, lv_color_hex(0x383838), 0);
+    lv_obj_set_style_border_width(_selectionMenu, 1, 0);
+    lv_obj_set_style_radius(_selectionMenu, 8, 0);
+    lv_obj_set_style_pad_all(_selectionMenu, 8, 0);
+    lv_obj_set_style_pad_row(_selectionMenu, 5, 0);
+    lv_obj_set_flex_flow(_selectionMenu, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(_selectionMenu, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_clear_flag(_selectionMenu, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(_selectionMenu, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_t* title_row = lv_obj_create(_selectionMenu);
     lv_obj_set_width(title_row, LV_PCT(100));
-    lv_obj_set_height(title_row, 40);
+    lv_obj_set_height(title_row, 30);
     lv_obj_set_style_pad_all(title_row, 0, 0);
     lv_obj_set_style_border_width(title_row, 0, 0);
+    lv_obj_set_style_bg_opa(title_row, 0, 0);
     lv_obj_clear_flag(title_row, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* title = lv_label_create(title_row);
     lv_label_set_text(title, "Select Locomotive");
-    lv_obj_align(title, LV_ALIGN_LEFT_MID, 10, 0);
+    lv_obj_set_style_text_color(title, lv_color_make(38, 166, 154), 0);
+    lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t* close_btn = lv_btn_create(title_row);
-    lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, -10, 0);
-    lv_obj_set_style_bg_color(close_btn, lv_color_make(200, 50, 50), 0);
+    lv_obj_set_size(close_btn, LV_SIZE_CONTENT, 28);
+    lv_obj_set_style_pad_hor(close_btn, 10, 0);
+    lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     lv_obj_t* close_lbl = lv_label_create(close_btn);
     lv_label_set_text(close_lbl, "Back");
     lv_obj_center(close_lbl);
     lv_obj_add_event_cb(close_btn, close_selection_event_cb, LV_EVENT_CLICKED, this);
 
-    lv_obj_t* btn_addr = lv_btn_create(_selectionMenu);
-    lv_obj_set_size(btn_addr, 200, 35);
-    lv_obj_align(btn_addr, LV_ALIGN_TOP_MID, 0, 45);
-    lv_obj_t* lbl_addr = lv_label_create(btn_addr);
-    lv_label_set_text(lbl_addr, "By Address");
-    lv_obj_center(lbl_addr);
-    lv_obj_add_event_cb(btn_addr, addr_btn_event_cb, LV_EVENT_CLICKED, this);
+    auto make_menu_btn = [&](const char* label, lv_event_cb_t cb, lv_color_t bg) {
+        lv_obj_t* btn = lv_btn_create(_selectionMenu);
+        lv_obj_set_width(btn, LV_PCT(100));
+        lv_obj_set_height(btn, 30);
+        lv_obj_set_style_bg_color(btn, bg, 0);
+        lv_obj_t* lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, label);
+        lv_obj_center(lbl);
+        lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, this);
+    };
 
-    lv_obj_t* btn_name = lv_btn_create(_selectionMenu);
-    lv_obj_set_size(btn_name, 200, 35);
-    lv_obj_align(btn_name, LV_ALIGN_TOP_MID, 0, 85);
-    lv_obj_t* lbl_name = lv_label_create(btn_name);
-    lv_label_set_text(lbl_name, "By Name");
-    lv_obj_center(lbl_name);
-    lv_obj_add_event_cb(btn_name, name_btn_event_cb, LV_EVENT_CLICKED, this);
-
-    lv_obj_t* btn_group = lv_btn_create(_selectionMenu);
-    lv_obj_set_size(btn_group, 200, 35);
-    lv_obj_align(btn_group, LV_ALIGN_TOP_MID, 0, 125);
-    lv_obj_t* lbl_group = lv_label_create(btn_group);
-    lv_label_set_text(lbl_group, "By Group");
-    lv_obj_center(lbl_group);
-    lv_obj_add_event_cb(btn_group, group_btn_event_cb, LV_EVENT_CLICKED, this);
-
-    lv_obj_t* btn_consist = lv_btn_create(_selectionMenu);
-    lv_obj_set_size(btn_consist, 200, 35);
-    lv_obj_align(btn_consist, LV_ALIGN_TOP_MID, 0, 165);
-    lv_obj_t* lbl_consist = lv_label_create(btn_consist);
-    lv_label_set_text(lbl_consist, "By Consist");
-    lv_obj_center(lbl_consist);
-    lv_obj_add_event_cb(btn_consist, consist_btn_event_cb, LV_EVENT_CLICKED, this);
-
-    lv_obj_t* btn_release = lv_btn_create(_selectionMenu);
-    lv_obj_set_size(btn_release, 200, 35);
-    lv_obj_align(btn_release, LV_ALIGN_TOP_MID, 0, 205);
-    lv_obj_set_style_bg_color(btn_release, lv_color_make(200, 50, 50), 0);
-    lv_obj_t* lbl_release = lv_label_create(btn_release);
-    lv_label_set_text(lbl_release, "Release");
-    lv_obj_center(lbl_release);
-    lv_obj_add_event_cb(btn_release, release_btn_event_cb, LV_EVENT_CLICKED, this);
+    make_menu_btn("By Address", addr_btn_event_cb,    lv_color_hex(0x2e2e2e));
+    make_menu_btn("By Name",    name_btn_event_cb,    lv_color_hex(0x2e2e2e));
+    make_menu_btn("By Group",   group_btn_event_cb,   lv_color_hex(0x2e2e2e));
+    make_menu_btn("By Consist", consist_btn_event_cb, lv_color_hex(0x2e2e2e));
+    make_menu_btn("Release",    release_btn_event_cb, lv_color_make(140, 40, 40));
 }
 
 void LocoUI::buildControlScreen() {
@@ -545,24 +529,30 @@ void LocoUI::showKeypad() {
     _keyboard = lv_obj_create(_container);
     lv_obj_set_size(_keyboard, LV_PCT(100), LV_PCT(100));
     lv_obj_align(_keyboard, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_pad_all(_keyboard, 0, 0);
+    lv_obj_set_style_bg_color(_keyboard, lv_color_hex(0x1e1e1e), 0);
     lv_obj_set_style_border_width(_keyboard, 0, 0);
+    lv_obj_set_style_pad_all(_keyboard, 8, 0);
+    lv_obj_set_style_pad_row(_keyboard, 5, 0);
     lv_obj_set_flex_flow(_keyboard, LV_FLEX_FLOW_COLUMN);
 
     lv_obj_t* title_row = lv_obj_create(_keyboard);
     lv_obj_set_width(title_row, LV_PCT(100));
-    lv_obj_set_height(title_row, 40);
+    lv_obj_set_height(title_row, 36);
     lv_obj_set_style_pad_all(title_row, 0, 0);
     lv_obj_set_style_border_width(title_row, 0, 0);
+    lv_obj_set_style_bg_opa(title_row, 0, 0);
     lv_obj_clear_flag(title_row, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* title = lv_label_create(title_row);
     lv_label_set_text(title, "Select By Address");
-    lv_obj_align(title, LV_ALIGN_LEFT_MID, 10, 0);
+    lv_obj_set_style_text_color(title, lv_color_make(38, 166, 154), 0);
+    lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t* close_btn = lv_btn_create(title_row);
-    lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, -10, 0);
-    lv_obj_set_style_bg_color(close_btn, lv_color_make(200, 50, 50), 0);
+    lv_obj_set_size(close_btn, LV_SIZE_CONTENT, 28);
+    lv_obj_set_style_pad_hor(close_btn, 10, 0);
+    lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     lv_obj_t* close_lbl = lv_label_create(close_btn);
     lv_label_set_text(close_lbl, "Back");
     lv_obj_center(close_lbl);
@@ -659,29 +649,34 @@ void LocoUI::name_btn_event_cb(lv_event_t * e) {
     }
 
     ui->_nameMenu = lv_obj_create(ui->_container);
-    lv_obj_set_size(ui->_nameMenu, LV_PCT(90), LV_PCT(90));
+    lv_obj_set_size(ui->_nameMenu, LV_PCT(90), LV_PCT(95));
     lv_obj_align(ui->_nameMenu, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_pad_all(ui->_nameMenu, 0, 0);
-    lv_obj_set_style_border_width(ui->_nameMenu, 0, 0);
-    lv_obj_set_style_radius(ui->_nameMenu, 12, 0);
-    lv_obj_set_style_shadow_width(ui->_nameMenu, 30, 0);
-    lv_obj_set_style_shadow_opa(ui->_nameMenu, LV_OPA_50, 0);
+    lv_obj_set_style_bg_color(ui->_nameMenu, lv_color_hex(0x1e1e1e), 0);
+    lv_obj_set_style_border_color(ui->_nameMenu, lv_color_hex(0x383838), 0);
+    lv_obj_set_style_border_width(ui->_nameMenu, 1, 0);
+    lv_obj_set_style_radius(ui->_nameMenu, 8, 0);
+    lv_obj_set_style_pad_all(ui->_nameMenu, 8, 0);
+    lv_obj_set_style_pad_row(ui->_nameMenu, 5, 0);
     lv_obj_set_flex_flow(ui->_nameMenu, LV_FLEX_FLOW_COLUMN);
 
     lv_obj_t* title_row = lv_obj_create(ui->_nameMenu);
     lv_obj_set_width(title_row, LV_PCT(100));
-    lv_obj_set_height(title_row, 40);
+    lv_obj_set_height(title_row, 36);
     lv_obj_set_style_pad_all(title_row, 0, 0);
     lv_obj_set_style_border_width(title_row, 0, 0);
+    lv_obj_set_style_bg_opa(title_row, 0, 0);
     lv_obj_clear_flag(title_row, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* title = lv_label_create(title_row);
     lv_label_set_text(title, "Select By Name");
-    lv_obj_align(title, LV_ALIGN_LEFT_MID, 10, 0);
+    lv_obj_set_style_text_color(title, lv_color_make(38, 166, 154), 0);
+    lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t* close_btn = lv_btn_create(title_row);
-    lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, -10, 0);
-    lv_obj_set_style_bg_color(close_btn, lv_color_make(200, 50, 50), 0);
+    lv_obj_set_size(close_btn, LV_SIZE_CONTENT, 28);
+    lv_obj_set_style_pad_hor(close_btn, 10, 0);
+    lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     lv_obj_t* close_lbl = lv_label_create(close_btn);
     lv_label_set_text(close_lbl, "Back");
     lv_obj_center(close_lbl);
@@ -691,7 +686,8 @@ void LocoUI::name_btn_event_cb(lv_event_t * e) {
     lv_obj_set_width(list, LV_PCT(100));
     lv_obj_set_flex_grow(list, 1);
     lv_obj_set_flex_flow(list, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(list, 5, 0);
+    lv_obj_set_style_pad_all(list, 0, 0);
+    lv_obj_set_style_pad_row(list, 4, 0);
     lv_obj_set_style_border_width(list, 0, 0);
 
     auto addLocos = [ui, list](fs::FS& fs) {
@@ -714,6 +710,8 @@ void LocoUI::name_btn_event_cb(lv_event_t * e) {
 
                     lv_obj_t* btn = lv_btn_create(list);
                     lv_obj_set_width(btn, LV_PCT(100));
+                    lv_obj_set_height(btn, 36);
+                    lv_obj_set_style_bg_color(btn, lv_color_hex(0x2e2e2e), 0);
                     lv_obj_t* lbl = lv_label_create(btn);
                     lv_label_set_text(lbl, nameStr.c_str());
                     lv_obj_center(lbl);
@@ -763,29 +761,34 @@ void LocoUI::group_btn_event_cb(lv_event_t * e) {
     }
 
     ui->_nameMenu = lv_obj_create(ui->_container);
-    lv_obj_set_size(ui->_nameMenu, LV_PCT(90), LV_PCT(90));
+    lv_obj_set_size(ui->_nameMenu, LV_PCT(90), LV_PCT(95));
     lv_obj_align(ui->_nameMenu, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_pad_all(ui->_nameMenu, 0, 0);
-    lv_obj_set_style_border_width(ui->_nameMenu, 0, 0);
-    lv_obj_set_style_radius(ui->_nameMenu, 12, 0);
-    lv_obj_set_style_shadow_width(ui->_nameMenu, 30, 0);
-    lv_obj_set_style_shadow_opa(ui->_nameMenu, LV_OPA_50, 0);
+    lv_obj_set_style_bg_color(ui->_nameMenu, lv_color_hex(0x1e1e1e), 0);
+    lv_obj_set_style_border_color(ui->_nameMenu, lv_color_hex(0x383838), 0);
+    lv_obj_set_style_border_width(ui->_nameMenu, 1, 0);
+    lv_obj_set_style_radius(ui->_nameMenu, 8, 0);
+    lv_obj_set_style_pad_all(ui->_nameMenu, 8, 0);
+    lv_obj_set_style_pad_row(ui->_nameMenu, 5, 0);
     lv_obj_set_flex_flow(ui->_nameMenu, LV_FLEX_FLOW_COLUMN);
 
     lv_obj_t* title_row = lv_obj_create(ui->_nameMenu);
     lv_obj_set_width(title_row, LV_PCT(100));
-    lv_obj_set_height(title_row, 40);
+    lv_obj_set_height(title_row, 36);
     lv_obj_set_style_pad_all(title_row, 0, 0);
     lv_obj_set_style_border_width(title_row, 0, 0);
+    lv_obj_set_style_bg_opa(title_row, 0, 0);
     lv_obj_clear_flag(title_row, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* title = lv_label_create(title_row);
     lv_label_set_text(title, "Select By Group");
-    lv_obj_align(title, LV_ALIGN_LEFT_MID, 10, 0);
+    lv_obj_set_style_text_color(title, lv_color_make(38, 166, 154), 0);
+    lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t* close_btn = lv_btn_create(title_row);
-    lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, -10, 0);
-    lv_obj_set_style_bg_color(close_btn, lv_color_make(200, 50, 50), 0);
+    lv_obj_set_size(close_btn, LV_SIZE_CONTENT, 28);
+    lv_obj_set_style_pad_hor(close_btn, 10, 0);
+    lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     lv_obj_t* close_lbl = lv_label_create(close_btn);
     lv_label_set_text(close_lbl, "Back");
     lv_obj_center(close_lbl);
@@ -795,7 +798,8 @@ void LocoUI::group_btn_event_cb(lv_event_t * e) {
     lv_obj_set_width(list, LV_PCT(100));
     lv_obj_set_flex_grow(list, 1);
     lv_obj_set_flex_flow(list, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(list, 5, 0);
+    lv_obj_set_style_pad_all(list, 0, 0);
+    lv_obj_set_style_pad_row(list, 4, 0);
     lv_obj_set_style_border_width(list, 0, 0);
 
     fs::FS& fs = Settings.getFS();
@@ -811,6 +815,8 @@ void LocoUI::group_btn_event_cb(lv_event_t * e) {
         for (JsonObjectConst group : groups) {
             lv_obj_t* btn = lv_btn_create(list);
             lv_obj_set_width(btn, LV_PCT(100));
+            lv_obj_set_height(btn, 36);
+            lv_obj_set_style_bg_color(btn, lv_color_hex(0x2e2e2e), 0);
             lv_obj_t* lbl = lv_label_create(btn);
             lv_label_set_text(lbl, group["name"] | "Unnamed Group");
             lv_obj_center(lbl);
@@ -875,6 +881,8 @@ void LocoUI::group_selected_event_cb(lv_event_t * e) {
 
             lv_obj_t* loco_btn = lv_btn_create(list);
             lv_obj_set_width(loco_btn, LV_PCT(100));
+            lv_obj_set_height(loco_btn, 36);
+            lv_obj_set_style_bg_color(loco_btn, lv_color_hex(0x2e2e2e), 0);
             lv_obj_t* lbl = lv_label_create(loco_btn);
             lv_label_set_text(lbl, nameStr.c_str());
             lv_obj_center(lbl);

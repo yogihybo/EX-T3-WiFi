@@ -67,7 +67,7 @@ SettingsUI::SettingsUI(DCCEXProtocol& dccex, lv_obj_t* parent) : _dccex(dccex), 
   static const lv_color_t VAL_FG = lv_color_hex(0x64b5f6);
   static const lv_color_t ERR_BG = lv_color_hex(0x3a1414);
   static const lv_color_t ERR_FG = lv_color_make(200, 60, 60);
-  static const char* rotLabels[] = { "Portrait", "Landscape" };
+  static const char* rotLabels[] = { "USB Down", "USB Up" };
   static const char* accelLabels[] = { "Off", "Slow", "Med", "Fast" };
 
   lv_obj_t* b;
@@ -207,7 +207,7 @@ void SettingsUI::theme_event_cb(lv_event_t * e) {
 void SettingsUI::rotation_event_cb(lv_event_t * e) {
   SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
   if (++Settings.rotation > 1) Settings.rotation = 0;
-  static const char* rotLabels[] = { "Portrait", "Landscape" };
+  static const char* rotLabels[] = { "USB Down", "USB Up" };
   lv_label_set_text(ui->_rotationLbl, rotLabels[Settings.rotation]);
   Settings.save();
   Settings.dispatchEvent(SettingsClass::Event::ROTATION_CHANGE);
@@ -311,12 +311,21 @@ void SettingsUI::brightness_btn_event_cb(lv_event_t * e) {
   lv_obj_set_width(slider, LV_PCT(100));
   lv_obj_set_style_margin_top(slider, 12, 0);
   lv_obj_set_style_margin_bottom(slider, 12, 0);
+  lv_obj_set_style_margin_hor(slider, 12, 0);
+  lv_obj_set_style_height(slider, 4, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(slider, lv_color_hex(0x333333), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(slider, lv_color_make(38, 166, 154), LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(slider, lv_color_hex(0xdddddd), LV_PART_KNOB);
+  lv_obj_set_style_pad_all(slider, 6, LV_PART_KNOB);
   lv_slider_set_range(slider, 10, 255);
   lv_slider_set_value(slider, Settings.brightness, LV_ANIM_OFF);
   lv_obj_add_event_cb(slider, brightness_event_cb, LV_EVENT_VALUE_CHANGED, ui);
 
   lv_obj_t* close_btn = lv_msgbox_add_footer_button(mbox, "Close");
   lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x2e2e2e), 0);
+  lv_obj_add_event_cb(close_btn, [](lv_event_t* e) {
+      lv_msgbox_close((lv_obj_t*)lv_event_get_user_data(e));
+  }, LV_EVENT_CLICKED, mbox);
 
   lv_obj_center(mbox);
 }

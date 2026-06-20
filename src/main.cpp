@@ -162,6 +162,10 @@ public:
     if (setUI_ptr && setUI_ptr->getProgramUI())
       setUI_ptr->getProgramUI()->receivedWriteCV(cv, value);
   }
+
+  void receivedTurnoutAction(int turnoutId, bool thrown) override {
+    if (accUI) accUI->receivedTurnoutAction(turnoutId, thrown);
+  }
 };
 
 AppDelegate appDelegate;

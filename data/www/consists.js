@@ -337,7 +337,7 @@ export default {
             <a class="btn btn-link p-0 d-flex align-items-center" :href="consist.file" download title="Download consist config">
               <svg width="16" height="16" fill="currentColor"><use xlink:href="bs.icons.svg#download"/></svg>
             </a>
-            <button @click="del(consist)" type="button" class="btn btn-link p-0 d-flex align-items-center" title="Delete consist">
+            <button @click="del(consist)" type="button" class="btn btn-link p-0 d-flex align-items-center text-danger" title="Delete consist">
               <svg width="16" height="16" fill="currentColor"><use xlink:href="bs.icons.svg#trash"/></svg>
             </button>
           </div>

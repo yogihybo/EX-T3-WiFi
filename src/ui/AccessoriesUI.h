@@ -17,8 +17,9 @@ class AccessoriesUI : public UIView {
     lv_obj_t* _btn_close;
     lv_obj_t* _status_lbl;
 
-    int      _lastState;  // -1 = unknown, 0 = closed, 1 = thrown
+    int      _lastState;       // -1 = unknown, 0 = closed, 1 = thrown
     uint16_t _lastAddr;
+    uint16_t _pendingQueryAddr; // address we last sent <T> for
 
     static const int MAX_RECENTS = 5;
     uint16_t _recents[MAX_RECENTS];
@@ -26,6 +27,7 @@ class AccessoriesUI : public UIView {
 
     void _buildContent();
     void sendCommand(bool thrown);
+    void queryStatus(uint16_t addr);
     void addRecent(uint16_t addr);
     void rebuildRecents();
     void updateStatus(bool thrown, uint16_t addr);
@@ -39,4 +41,6 @@ class AccessoriesUI : public UIView {
   public:
     AccessoriesUI(DCCEXProtocol& dccex, lv_obj_t* parent);
     ~AccessoriesUI() override;
+
+    void receivedTurnoutAction(int id, bool thrown);
 };

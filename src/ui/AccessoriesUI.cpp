@@ -1,7 +1,7 @@
 #include "AccessoriesUI.h"
 
 AccessoriesUI::AccessoriesUI(DCCEXProtocol& dccex, lv_obj_t* parent)
-    : _dccex(dccex), _keyboard(nullptr), _lastState(-1), _lastAddr(0), _recentCount(0) {
+    : _dccex(dccex), _keyboard(nullptr), _lastState(-1), _lastAddr(0), _pendingQueryAddr(0), _recentCount(0) {
 
     memset(_recents, 0, sizeof(_recents));
 
@@ -180,6 +180,11 @@ void AccessoriesUI::updateButtonStyles() {
         closed ? lv_color_make(40, 140, 40) : lv_color_hex(0x2e2e2e), 0);
 }
 
+void AccessoriesUI::queryStatus(uint16_t addr) {
+    _pendingQueryAddr = addr;
+    _dccex.sendCommand("T");
+}
+
 void AccessoriesUI::textarea_event_cb(lv_event_t* e) {
     AccessoriesUI* ui = (AccessoriesUI*)lv_event_get_user_data(e);
     if (ui->_keyboard) return;
@@ -192,6 +197,20 @@ void AccessoriesUI::textarea_event_cb(lv_event_t* e) {
 
 void AccessoriesUI::kb_event_cb(lv_event_t* e) {
     AccessoriesUI* ui = (AccessoriesUI*)lv_event_get_user_data(e);
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if (code == LV_EVENT_READY && ui->_textarea) {
+        const char* txt = lv_textarea_get_text(ui->_textarea);
+        if (txt && strlen(txt) > 0) {
+            uint16_t addr = (uint16_t)atoi(txt);
+            if (addr >= 1 && addr <= 2044) {
+                ui->_lastState = -1;
+                ui->updateButtonStyles();
+                ui->queryStatus(addr);
+            }
+        }
+    }
+
     if (ui->_keyboard) {
         lv_obj_delete_async(ui->_keyboard);
         ui->_keyboard = nullptr;
@@ -211,4 +230,16 @@ void AccessoriesUI::chip_event_cb(lv_event_t* e) {
     char buf[8];
     snprintf(buf, sizeof(buf), "%d", addr);
     lv_textarea_set_text(ui->_textarea, buf);
+    ui->_lastState = -1;
+    ui->updateButtonStyles();
+    ui->queryStatus(addr);
+}
+
+void AccessoriesUI::receivedTurnoutAction(int id, bool thrown) {
+    if (id != _pendingQueryAddr) return;
+    _lastState = thrown ? 1 : 0;
+    _lastAddr  = (uint16_t)id;
+    updateButtonStyles();
+    if (_status_lbl)
+        updateStatus(thrown, (uint16_t)id);
 }
