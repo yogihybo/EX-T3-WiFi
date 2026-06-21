@@ -47,6 +47,13 @@ const Modal = {
   computed: {
     custom() { return this.fns === 'custom'; },
     fnDefaults() { return FN_DEFAULTS; },
+    builtinPreview() {
+      if (this.fns?.startsWith('builtin:')) {
+        const idx = parseInt(this.fns.split(':')[1]);
+        return FN_DEFAULTS[idx]?.functions ?? null;
+      }
+      return null;
+    },
   },
   methods: {
     validAddress({ target }) {
@@ -82,7 +89,7 @@ const Modal = {
         });
         
         if (response.ok) {
-          this.$emit('update', { file, name: this.name });
+          this.$emit('update', { file, name: this.name, fns: this.fns === 'custom' ? this.editor : this.fns });
           this.close();
         }
       };
@@ -133,7 +140,17 @@ const Modal = {
             </div>
             <div class="row">
               <div class="col">
-                <FnEditor v-if="custom && editor !== null" v-model="editor" class="mt-3" />
+                <template v-if="builtinPreview">
+                  <div class="mt-3">
+                    <p class="text-muted small fst-italic mb-2">Built-in set — read only. Use <strong>Copy</strong> to create a customisable version.</p>
+                    <div v-for="row in builtinPreview" :key="row[0].fn" class="d-flex align-items-center gap-3 py-1 border-bottom small text-muted">
+                      <span class="fw-semibold text-nowrap" style="width:2.5rem;">F{{ row[0].fn }}</span>
+                      <span class="text-nowrap" style="width:3rem;font-size:0.8em;">{{ row[0].latching ? 'Latch' : 'Mom.' }}</span>
+                      <span>{{ row[0].name }}</span>
+                    </div>
+                  </div>
+                </template>
+                <FnEditor v-else-if="custom && editor !== null" v-model="editor" class="mt-3" />
               </div>
             </div>
           </div>
@@ -183,18 +200,38 @@ export default {
     }
   },
   methods: {
+    computeFnRange(functions) {
+      if (!functions) return null;
+      if (functions === 'builtin:0') return 'F0–F8';
+      if (functions === 'builtin:1') return 'F0–F15';
+      if (Array.isArray(functions)) {
+        const nums = functions.flatMap(row => row.filter(b => typeof b === 'object').map(b => b.fn)).filter(n => Number.isInteger(n));
+        if (!nums.length) return null;
+        const min = Math.min(...nums), max = Math.max(...nums);
+        return min === max ? `F${min}` : `F${min}–F${max}`;
+      }
+      if (typeof functions === 'string') return functions.split('/').pop().replace(/\.json$/, '');
+      return null;
+    },
     async load() {
-      {
-        this.isLoading = true;
-        const response = await fetch('/locos');
-        this.locos = await response.json();
-        this.isLoading = false;
-      }
-      {
-        const response = await fetch('/fns');
-        const builtins = FN_DEFAULTS.map((d, i) => ({ file: `builtin:${i}`, name: d.name }));
-        this.functions = [...builtins, { file: 'custom', name: 'Custom Functions' }, ...await response.json()];
-      }
+      this.isLoading = true;
+      const response = await fetch('/locos');
+      const locos = await response.json();
+      this.locos = await Promise.all(locos.map(async loco => {
+        try {
+          const r = await fetch(loco.file);
+          if (r.ok) {
+            const { functions } = await r.json();
+            return { ...loco, fnRange: this.computeFnRange(functions) };
+          }
+        } catch {}
+        return { ...loco, fnRange: null };
+      }));
+      this.isLoading = false;
+
+      const r2 = await fetch('/fns');
+      const builtins = FN_DEFAULTS.map((d, i) => ({ file: `builtin:${i}`, name: d.name }));
+      this.functions = [...builtins, { file: 'custom', name: 'Custom Functions' }, ...await r2.json()];
     },
     add() {
       this.save = true;
@@ -211,11 +248,13 @@ export default {
       }
     },
     onLocoSaved(loco) {
-      const existing = this.locos.findIndex(({ file })=> file === loco.file);
+      const fnRange = this.computeFnRange(loco.fns);
+      const existing = this.locos.findIndex(({ file }) => file === loco.file);
       if (existing !== -1) {
         this.locos[existing].name = loco.name;
+        this.locos[existing].fnRange = fnRange;
       } else {
-        this.locos.push(loco);
+        this.locos.push({ file: loco.file, name: loco.name, fnRange });
       }
     },
   },
@@ -226,16 +265,18 @@ export default {
         <ul :class="{ loading: isLoading }" class="list-group list-group-flush">
           <li class="list-group-item py-1 border-bottom">
             <div class="row small text-muted fw-semibold">
-              <div class="col-3 col-md-2">#</div>
-              <div class="col">Name</div>
-              <div class="col-auto" style="min-width: 80px;"></div>
+              <div class="col-2" style="max-width:13%;">#</div>
+              <div class="col-4 col-md-5">Name</div>
+              <div class="col-3">Functions</div>
+              <div class="col-2"></div>
             </div>
           </li>
           <li v-for="loco of sorted" :key="loco.file" class="list-group-item">
             <div class="row align-items-center">
-              <div class="col-3 col-md-2">#{{ loco.file.match(/\\d+/i)?.[0] }}</div>
-              <div class="col">{{ loco.name }}</div>
-              <div class="col-auto d-flex flex-nowrap gap-2">
+              <div class="col-2" style="max-width:13%;">#{{ loco.file.match(/\\d+/i)?.[0] }}</div>
+              <div class="col-4 col-md-5">{{ loco.name }}</div>
+              <div class="col-3 text-muted small text-nowrap">{{ loco.fnRange || '–' }}</div>
+              <div class="col-2 d-flex flex-nowrap gap-2">
                 <button @click="edit(loco)" class="btn btn-link p-0 d-flex align-items-center" title="Edit loco">
                   <svg width="16" height="16" fill="currentColor"><use xlink:href="bs.icons.svg#pencil"/></svg>
                 </button>

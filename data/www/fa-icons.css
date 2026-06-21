@@ -1,3 +1,4 @@
+.fa-sun::before { content: "\f185"; }
 .fa-lightbulb::before { content: "\f0eb"; }
 .fa-lightbulb-on::before { content: "\f672"; }
 .fa-lightbulb-slash::before { content: "\f673"; }
@@ -33,6 +34,13 @@
 .fa-forward-fast::before { content: "\f050"; }
 .fa-backward-fast::before { content: "\f049"; }
 .fa-stop::before { content: "\f04d"; }
+.fa-bullseye::before { content: "\f140"; }
+.fa-cloud::before { content: "\f0c2"; }
+.fa-link::before { content: "\f0c1"; }
+.fa-link-slash::before { content: "\f127"; }
+
+.fa-link-horizontal::before { content: "\e1cb"; }
+.fa-link-horizontal-slash::before { content: "\e1cc"; }
 .fa-hand::before { content: "\f256"; }
 .fa-brake-warning::before { content: "\e0c7"; }
 .fa-tire-pressure-warning::before { content: "\f633"; }

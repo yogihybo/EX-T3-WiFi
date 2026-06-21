@@ -370,6 +370,11 @@ void LocoUI::buildControlScreen() {
     renderFunctionPage();
 }
 
+static const char* BUILTIN_PATHS[] = {
+    "/fns/builtin-basic.json",
+    "/fns/builtin-extended.json",
+};
+
 void LocoUI::buildFunctionButtons(JsonDocument& locoDoc) {
     JsonArrayConst locoFunctions;
     if (locoDoc["functions"].is<JsonArray>()) {
@@ -377,12 +382,29 @@ void LocoUI::buildFunctionButtons(JsonDocument& locoDoc) {
     } else {
         File functionFile;
         fs::FS& fs = Settings.getFS();
+        bool builtinLoaded = false;
 
         if (locoDoc.containsKey("functions")) {
             const char* fnPath = locoDoc["functions"].as<const char*>();
-            if (fs.exists(fnPath)) functionFile = fs.open(fnPath);
+            if (fnPath && strncmp(fnPath, "builtin:", 8) == 0) {
+                int idx = atoi(fnPath + 8);
+                if (idx >= 0 && idx < (int)(sizeof(BUILTIN_PATHS) / sizeof(BUILTIN_PATHS[0]))) {
+                    File builtinFile = WebsiteFS.open(BUILTIN_PATHS[idx]);
+                    if (builtinFile) {
+                        StaticJsonDocument<16> filter;
+                        filter["functions"] = true;
+                        locoDoc.clear();
+                        deserializeJson(locoDoc, builtinFile, DeserializationOption::Filter(filter));
+                        builtinFile.close();
+                        locoFunctions = locoDoc["functions"].as<JsonArray>();
+                        builtinLoaded = true;
+                    }
+                }
+            } else if (fnPath && fs.exists(fnPath)) {
+                functionFile = fs.open(fnPath);
+            }
         }
-        if (!functionFile) {
+        if (!builtinLoaded && !functionFile) {
             if (WebsiteFS.exists("/default.json")) {
                 functionFile = WebsiteFS.open("/default.json");
             } else if (fs.exists("/default.json")) {

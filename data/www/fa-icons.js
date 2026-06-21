@@ -1,6 +1,7 @@
 // FA6 Solid codepoints compiled into fa_icons_18 on the device
 export const FA_ICONS = [
   // Lighting
+  { icon: 'sun',                    label: 'Sun',          cp: 0xf185 },
   { icon: 'lightbulb',              label: 'Light',        cp: 0xf0eb },
   { icon: 'lightbulb-on',           label: 'Light On',     cp: 0xf672 },
   { icon: 'lightbulb-slash',        label: 'Light Off',    cp: 0xf673 },
@@ -42,6 +43,8 @@ export const FA_ICONS = [
   { icon: 'stop',                   label: 'Stop',         cp: 0xf04d },
 
   // Braking & Safety
+  { icon: 'bullseye',               label: 'Bullseye',     cp: 0xf140 },
+  { icon: 'cloud',                  label: 'Cloud',        cp: 0xf0c2 },
   { icon: 'hand',                   label: 'Hand Stop',    cp: 0xf256 },
   { icon: 'brake-warning',          label: 'Brake Warn',   cp: 0xe0c7 },
   { icon: 'tire-pressure-warning',  label: 'Pressure',     cp: 0xf633 },
@@ -113,6 +116,13 @@ export const FA_ICONS = [
   { icon: 'temperature-low',        label: 'Temp Cold',    cp: 0xf76b },
   { icon: 'thermometer',            label: 'Thermometer',  cp: 0xf491 },
   { icon: 'heat',                   label: 'Heat',         cp: 0xe00c },
+
+  // Couplers
+  { icon: 'link',                   label: 'Link',         cp: 0xf0c1 },
+  { icon: 'link-slash',             label: 'Link Off',     cp: 0xf127 },
+
+  { icon: 'link-horizontal',        label: 'Link Horiz',   cp: 0xe1cb },
+  { icon: 'link-horizontal-slash',  label: 'Link Hz Off',  cp: 0xe1cc },
 
   // Train / Track
   { icon: 'train',                  label: 'Train',        cp: 0xf238 },

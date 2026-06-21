@@ -204,6 +204,7 @@ public:
       }
       request->send(exists ? 204 : 404);
     } else if (request->method() == HTTP_DELETE) {
+      if (url.startsWith("/fns/builtin-")) { request->send(403); return; }
       bool success = false;
       if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
         fs::FS& fs = Settings.getFS();
@@ -214,6 +215,7 @@ public:
       }
       request->send(success ? 204 : 404);
     } else if (request->method() == HTTP_PUT) {
+      if (url.startsWith("/fns/builtin-")) { request->send(403); return; }
       request->send(204);
     }
   }

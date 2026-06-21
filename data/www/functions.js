@@ -72,7 +72,7 @@ const Modal = {
             <div class="row">
               <div class="col-12">
                 <div class="form-floating">
-                  <input v-model="name" type="text" class="form-control" required maxlength="20" placeholder="Function Set Name" />
+                  <input v-model="name" type="text" class="form-control" required maxlength="40" placeholder="Function Set Name" />
                   <label>Function Set Name</label>
                 </div>
               </div>
