@@ -1,4 +1,5 @@
 #include "SettingsUI.h"
+#include "Theme.h"
 #include "WiFiUI.h"
 #include "AboutUI.h"
 #include "ProgramUI.h"
@@ -21,7 +22,7 @@ SettingsUI::SettingsUI(DCCEXProtocol& dccex, lv_obj_t* parent) : _dccex(dccex), 
   auto add_section = [this](const char* title) {
     lv_obj_t* lbl = lv_label_create(_container);
     lv_label_set_text(lbl, title);
-    lv_obj_set_style_text_color(lbl, lv_color_make(38, 166, 154), 0);
+    lv_obj_set_style_text_color(lbl, tc(TC_SECTION), 0);
     lv_obj_set_width(lbl, LV_PCT(100));
     lv_obj_set_style_pad_top(lbl, 6, 0);
   };
@@ -32,7 +33,7 @@ SettingsUI::SettingsUI(DCCEXProtocol& dccex, lv_obj_t* parent) : _dccex(dccex), 
     lv_obj_set_height(btn, 32);
     lv_obj_set_style_pad_ver(btn, 0, 0);
     lv_obj_set_style_pad_hor(btn, 7, 0);
-    lv_obj_set_style_bg_color(btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_set_style_bg_color(btn, tc(TC_SURFACE_RAISED), 0);
     lv_obj_set_flex_flow(btn, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(btn, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     if (cb) lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, this);
@@ -60,11 +61,11 @@ SettingsUI::SettingsUI(DCCEXProtocol& dccex, lv_obj_t* parent) : _dccex(dccex), 
   auto make_chevron = [](lv_obj_t* btn) {
     lv_obj_t* ch = lv_label_create(btn);
     lv_label_set_text(ch, LV_SYMBOL_RIGHT);
-    lv_obj_set_style_text_color(ch, lv_color_hex(0x555555), 0);
+    lv_obj_set_style_text_color(ch, tc(TC_TEXT_MUTED), 0);
   };
 
-  static const lv_color_t VAL_BG = lv_color_hex(0x1a2c3e);
-  static const lv_color_t VAL_FG = lv_color_hex(0x64b5f6);
+  const lv_color_t VAL_BG = tc(TC_BADGE_BG);
+  const lv_color_t VAL_FG = tc(TC_BADGE_FG);
   static const lv_color_t ERR_BG = lv_color_hex(0x3a1414);
   static const lv_color_t ERR_FG = lv_color_make(200, 60, 60);
   static const char* rotLabels[] = { "USB Down", "USB Up" };
@@ -148,8 +149,8 @@ SettingsUI::SettingsUI(DCCEXProtocol& dccex, lv_obj_t* parent) : _dccex(dccex), 
   make_name(b, "Access point");
   _apModeLbl = make_badge(b,
     Settings.AP.enabled ? "ON" : "OFF",
-    Settings.AP.enabled ? lv_color_hex(0x1b3a1b) : lv_color_hex(0x2a2a2a),
-    Settings.AP.enabled ? lv_color_make(76, 175, 80) : lv_color_hex(0x666666));
+    Settings.AP.enabled ? lv_color_hex(0x1b3a1b) : tc(TC_SURFACE_DEEP),
+    Settings.AP.enabled ? lv_color_make(76, 175, 80) : tc(TC_TEXT_MUTED));
 
   // -------------------------------------------------------
   // ABOUT
@@ -233,8 +234,8 @@ void SettingsUI::ap_mode_event_cb(lv_event_t * e) {
   Settings.AP.enabled = !Settings.AP.enabled;
   bool apOn = Settings.AP.enabled;
   lv_label_set_text(ui->_apModeLbl, apOn ? "ON" : "OFF");
-  lv_obj_set_style_bg_color(ui->_apModeLbl, apOn ? lv_color_hex(0x1b3a1b) : lv_color_hex(0x2a2a2a), 0);
-  lv_obj_set_style_text_color(ui->_apModeLbl, apOn ? lv_color_make(76, 175, 80) : lv_color_hex(0x666666), 0);
+  lv_obj_set_style_bg_color(ui->_apModeLbl, apOn ? lv_color_hex(0x1b3a1b) : tc(TC_SURFACE_DEEP), 0);
+  lv_obj_set_style_text_color(ui->_apModeLbl, apOn ? lv_color_make(76, 175, 80) : tc(TC_TEXT_MUTED), 0);
   Settings.save();
   // Dispatch CS_CHANGE to trigger network stack updates in main.cpp
   Settings.dispatchEvent(SettingsClass::Event::CS_CHANGE);
@@ -242,8 +243,8 @@ void SettingsUI::ap_mode_event_cb(lv_event_t * e) {
 
 static void style_msgbox(lv_obj_t* mbox, const char* title_text, lv_color_t title_color) {
     lv_obj_set_width(mbox, LV_PCT(88));
-    lv_obj_set_style_bg_color(mbox, lv_color_hex(0x1e1e1e), 0);
-    lv_obj_set_style_border_color(mbox, lv_color_hex(0x383838), 0);
+    lv_obj_set_style_bg_color(mbox, tc(TC_OVERLAY_BG), 0);
+    lv_obj_set_style_border_color(mbox, tc(TC_OVERLAY_BORDER), 0);
     lv_obj_set_style_border_width(mbox, 1, 0);
     lv_obj_t* title = lv_msgbox_add_title(mbox, title_text);
     lv_obj_set_style_text_color(title, title_color, 0);
@@ -251,7 +252,7 @@ static void style_msgbox(lv_obj_t* mbox, const char* title_text, lv_color_t titl
 
 static void style_msgbox_text(lv_obj_t* txt) {
     lv_obj_set_style_text_font(txt, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(txt, lv_color_hex(0xaaaaaa), 0);
+    lv_obj_set_style_text_color(txt, tc(TC_OVERLAY_TEXT), 0);
 }
 
 void SettingsUI::sd_format_event_cb(lv_event_t * e) {
@@ -267,7 +268,7 @@ void SettingsUI::sd_format_event_cb(lv_event_t * e) {
     lv_obj_add_event_cb(format_btn, sd_format_confirm_event_cb, LV_EVENT_CLICKED, ui);
 
     lv_obj_t* cancel_btn = lv_msgbox_add_footer_button(ui->_formatMsgbox, "Cancel");
-    lv_obj_set_style_bg_color(cancel_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_set_style_bg_color(cancel_btn, tc(TC_SURFACE_RAISED), 0);
     lv_obj_add_event_cb(cancel_btn, [](lv_event_t* e) {
         SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
         if (ui->_formatMsgbox) {
@@ -294,7 +295,7 @@ void SettingsUI::sd_format_confirm_event_cb(lv_event_t * e) {
         style_msgbox_text(lv_msgbox_add_text(ui->_formatMsgbox, "Unable to mount SD card. Check it is inserted correctly."));
 
         lv_obj_t* ok_btn = lv_msgbox_add_footer_button(ui->_formatMsgbox, "OK");
-        lv_obj_set_style_bg_color(ok_btn, lv_color_hex(0x2e2e2e), 0);
+        lv_obj_set_style_bg_color(ok_btn, tc(TC_SURFACE_RAISED), 0);
         lv_obj_add_event_cb(ok_btn, [](lv_event_t* e) {
             SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
             if (ui->_formatMsgbox) {
@@ -312,7 +313,7 @@ void SettingsUI::brightness_btn_event_cb(lv_event_t * e) {
   SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
 
   lv_obj_t* mbox = lv_msgbox_create(lv_layer_top());
-  style_msgbox(mbox, "Brightness", lv_color_make(38, 166, 154));
+  style_msgbox(mbox, "Brightness", tc(TC_SECTION));
 
   lv_obj_t* slider = lv_slider_create(mbox);
   lv_obj_set_width(slider, LV_PCT(100));
@@ -320,8 +321,8 @@ void SettingsUI::brightness_btn_event_cb(lv_event_t * e) {
   lv_obj_set_style_margin_bottom(slider, 12, 0);
   lv_obj_set_style_margin_hor(slider, 12, 0);
   lv_obj_set_style_height(slider, 4, LV_PART_MAIN);
-  lv_obj_set_style_bg_color(slider, lv_color_hex(0x333333), LV_PART_MAIN);
-  lv_obj_set_style_bg_color(slider, lv_color_make(38, 166, 154), LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(slider, tc(TC_BORDER), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(slider, tc(TC_SECTION), LV_PART_INDICATOR);
   lv_obj_set_style_bg_color(slider, lv_color_hex(0xdddddd), LV_PART_KNOB);
   lv_obj_set_style_pad_all(slider, 6, LV_PART_KNOB);
   lv_slider_set_range(slider, 10, 255);
@@ -329,7 +330,7 @@ void SettingsUI::brightness_btn_event_cb(lv_event_t * e) {
   lv_obj_add_event_cb(slider, brightness_event_cb, LV_EVENT_VALUE_CHANGED, ui);
 
   lv_obj_t* close_btn = lv_msgbox_add_footer_button(mbox, "Close");
-  lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x2e2e2e), 0);
+  lv_obj_set_style_bg_color(close_btn, tc(TC_SURFACE_RAISED), 0);
   lv_obj_add_event_cb(close_btn, [](lv_event_t* e) {
       lv_msgbox_close((lv_obj_t*)lv_event_get_user_data(e));
   }, LV_EVENT_CLICKED, mbox);
@@ -377,7 +378,7 @@ void SettingsUI::calibrate_event_cb(lv_event_t * e) {
   if (ui->_calMsgbox) return;
 
   ui->_calMsgbox = lv_msgbox_create(lv_layer_top());
-  style_msgbox(ui->_calMsgbox, "Touch calibration", lv_color_make(38, 166, 154));
+  style_msgbox(ui->_calMsgbox, "Touch calibration", tc(TC_SECTION));
   style_msgbox_text(lv_msgbox_add_text(ui->_calMsgbox, "Use a stylus to precisely tap the targets.\nIncorrect calibration will make the screen unusable."));
 
   lv_obj_t* start_btn = lv_msgbox_add_footer_button(ui->_calMsgbox, "Start");
@@ -395,7 +396,7 @@ void SettingsUI::calibrate_event_cb(lv_event_t * e) {
   }, LV_EVENT_CLICKED, ui);
 
   lv_obj_t* cancel_btn = lv_msgbox_add_footer_button(ui->_calMsgbox, "Cancel");
-  lv_obj_set_style_bg_color(cancel_btn, lv_color_hex(0x2e2e2e), 0);
+  lv_obj_set_style_bg_color(cancel_btn, tc(TC_SURFACE_RAISED), 0);
 
   lv_obj_add_event_cb(cancel_btn, [](lv_event_t* e) {
       SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
@@ -510,10 +511,10 @@ static void demo_timer_cb(lv_timer_t*) {
         snprintf(summary, sizeof(summary), "%d frames saved to SD:\ndemo_00.bmp – demo_%02d.bmp", DEMO_TOTAL, DEMO_TOTAL - 1);
 
         lv_obj_t* mbox = lv_msgbox_create(lv_layer_top());
-        style_msgbox(mbox, "Demo complete", lv_color_make(38, 166, 154));
+        style_msgbox(mbox, "Demo complete", tc(TC_SECTION));
         style_msgbox_text(lv_msgbox_add_text(mbox, summary));
         lv_obj_t* ok_btn = lv_msgbox_add_footer_button(mbox, "OK");
-        lv_obj_set_style_bg_color(ok_btn, lv_color_hex(0x2e2e2e), 0);
+        lv_obj_set_style_bg_color(ok_btn, tc(TC_SURFACE_RAISED), 0);
         lv_obj_add_event_cb(ok_btn, [](lv_event_t* e) {
             lv_msgbox_close((lv_obj_t*)lv_event_get_user_data(e));
         }, LV_EVENT_CLICKED, mbox);
@@ -543,7 +544,7 @@ void SettingsUI::demo_event_cb(lv_event_t* e) {
     }, LV_EVENT_CLICKED, ui);
 
     lv_obj_t* cancel_btn = lv_msgbox_add_footer_button(ui->_demoMsgbox, "Cancel");
-    lv_obj_set_style_bg_color(cancel_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_set_style_bg_color(cancel_btn, tc(TC_SURFACE_RAISED), 0);
     lv_obj_add_event_cb(cancel_btn, [](lv_event_t* e) {
         SettingsUI* ui = (SettingsUI*)lv_event_get_user_data(e);
         lv_msgbox_close(ui->_demoMsgbox);

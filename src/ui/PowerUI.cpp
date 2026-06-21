@@ -1,4 +1,5 @@
 #include "PowerUI.h"
+#include "Theme.h"
 
 static lv_obj_t* make_card(lv_obj_t* parent) {
     lv_obj_t* card = lv_obj_create(parent);
@@ -7,7 +8,7 @@ static lv_obj_t* make_card(lv_obj_t* parent) {
     lv_obj_set_style_pad_all(card, 6, 0);
     lv_obj_set_style_pad_row(card, 5, 0);
     lv_obj_set_style_border_width(card, 0, 0);
-    lv_obj_set_style_bg_color(card, lv_color_hex(0x1e1e1e), 0);
+    lv_obj_set_style_bg_color(card, tc(TC_SURFACE), 0);
     lv_obj_set_style_radius(card, 6, 0);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
@@ -33,7 +34,7 @@ static lv_obj_t* make_dot(lv_obj_t* parent) {
     lv_obj_set_size(dot, 10, 10);
     lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_border_width(dot, 0, 0);
-    lv_obj_set_style_bg_color(dot, lv_color_hex(0x555555), 0);
+    lv_obj_set_style_bg_color(dot, tc(TC_ICON_INACTIVE), 0);
     lv_obj_clear_flag(dot, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(dot, LV_OBJ_FLAG_SCROLLABLE);
     return dot;
@@ -43,7 +44,7 @@ static lv_obj_t* make_action_btn(lv_obj_t* parent, const char* label, int action
     lv_obj_t* btn = lv_btn_create(parent);
     lv_obj_set_flex_grow(btn, 1);
     lv_obj_set_height(btn, 32);
-    lv_obj_set_style_bg_color(btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_set_style_bg_color(btn, tc(TC_SURFACE_RAISED), 0);
     lv_obj_t* lbl = lv_label_create(btn);
     lv_label_set_text(lbl, label);
     lv_obj_center(lbl);
@@ -111,12 +112,12 @@ PowerUI::PowerUI(DCCEXProtocol& dccex, lv_obj_t* parent) : _dccex(dccex) {
     lv_obj_set_width(_btn_join, LV_PCT(100));
     lv_obj_set_style_margin_hor(_btn_join, 6, 0);
     lv_obj_set_height(_btn_join, 32);
-    lv_obj_set_style_bg_color(_btn_join, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_bg_color(_btn_join, tc(TC_SURFACE_DEEP), 0);
     lv_obj_set_style_border_width(_btn_join, 1, 0);
-    lv_obj_set_style_border_color(_btn_join, lv_color_hex(0x383838), 0);
+    lv_obj_set_style_border_color(_btn_join, tc(TC_BORDER), 0);
     lv_obj_t* join_lbl = lv_label_create(_btn_join);
     lv_label_set_text(join_lbl, "Join tracks");
-    lv_obj_set_style_text_color(join_lbl, lv_color_hex(0x777777), 0);
+    lv_obj_set_style_text_color(join_lbl, tc(TC_TEXT_HINT), 0);
     lv_obj_center(join_lbl);
     lv_obj_set_user_data(_btn_join, (void*)7);
     lv_obj_add_event_cb(_btn_join, btn_event_cb, LV_EVENT_CLICKED, this);
@@ -130,9 +131,9 @@ PowerUI::~PowerUI() {
 
 void PowerUI::updateStyles() {
     lv_obj_set_style_bg_color(_btn_main_on,
-        _mainOn ? lv_color_make(40, 140, 40) : lv_color_hex(0x2e2e2e), 0);
+        _mainOn ? lv_color_make(40, 140, 40) : tc(TC_SURFACE_RAISED), 0);
     lv_obj_set_style_bg_color(_btn_main_off,
-        !_mainOn ? lv_color_make(140, 40, 40) : lv_color_hex(0x2e2e2e), 0);
+        !_mainOn ? lv_color_make(140, 40, 40) : tc(TC_SURFACE_RAISED), 0);
 
     lv_obj_set_style_bg_color(_dot_main,
         _mainOn ? lv_color_make(76, 175, 80) : lv_color_make(180, 50, 50), 0);
@@ -141,9 +142,9 @@ void PowerUI::updateStyles() {
         _mainOn ? lv_color_make(76, 175, 80) : lv_color_make(180, 50, 50), 0);
 
     lv_obj_set_style_bg_color(_btn_prog_on,
-        _progOn ? lv_color_make(40, 140, 40) : lv_color_hex(0x2e2e2e), 0);
+        _progOn ? lv_color_make(40, 140, 40) : tc(TC_SURFACE_RAISED), 0);
     lv_obj_set_style_bg_color(_btn_prog_off,
-        !_progOn ? lv_color_make(140, 40, 40) : lv_color_hex(0x2e2e2e), 0);
+        !_progOn ? lv_color_make(140, 40, 40) : tc(TC_SURFACE_RAISED), 0);
 
     lv_obj_set_style_bg_color(_dot_prog,
         _progOn ? lv_color_make(76, 175, 80) : lv_color_make(180, 50, 50), 0);
@@ -152,17 +153,17 @@ void PowerUI::updateStyles() {
         _progOn ? lv_color_make(76, 175, 80) : lv_color_make(180, 50, 50), 0);
 
     lv_obj_set_style_bg_color(_btn_all_on,
-        (_mainOn && _progOn) ? lv_color_make(40, 140, 40) : lv_color_hex(0x2e2e2e), 0);
+        (_mainOn && _progOn) ? lv_color_make(40, 140, 40) : tc(TC_SURFACE_RAISED), 0);
     lv_obj_set_style_bg_color(_btn_all_off,
-        (!_mainOn && !_progOn) ? lv_color_make(140, 40, 40) : lv_color_hex(0x2e2e2e), 0);
+        (!_mainOn && !_progOn) ? lv_color_make(140, 40, 40) : tc(TC_SURFACE_RAISED), 0);
 
     lv_obj_set_style_bg_color(_btn_join,
-        _joinOn ? lv_color_make(180, 120, 30) : lv_color_hex(0x222222), 0);
+        _joinOn ? lv_color_make(180, 120, 30) : tc(TC_SURFACE_DEEP), 0);
     lv_obj_t* join_lbl = lv_obj_get_child(_btn_join, 0);
     if (join_lbl) {
         lv_label_set_text(join_lbl, _joinOn ? "Unjoin (cuts power)" : "Join tracks");
         lv_obj_set_style_text_color(join_lbl,
-            _joinOn ? lv_color_hex(0xeeeeee) : lv_color_hex(0x777777), 0);
+            _joinOn ? tc(TC_TEXT_PRIMARY) : tc(TC_TEXT_HINT), 0);
     }
 }
 

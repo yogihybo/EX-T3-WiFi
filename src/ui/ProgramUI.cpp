@@ -1,9 +1,10 @@
 #include "ProgramUI.h"
+#include "Theme.h"
 
 static void style_popup(lv_obj_t* mbox) {
     lv_obj_set_width(mbox, LV_PCT(90));
-    lv_obj_set_style_bg_color(mbox, lv_color_hex(0x1e1e1e), 0);
-    lv_obj_set_style_border_color(mbox, lv_color_hex(0x383838), 0);
+    lv_obj_set_style_bg_color(mbox, tc(TC_OVERLAY_BG), 0);
+    lv_obj_set_style_border_color(mbox, tc(TC_OVERLAY_BORDER), 0);
     lv_obj_set_style_border_width(mbox, 1, 0);
 }
 
@@ -42,13 +43,13 @@ ProgramUI::ProgramUI(DCCEXProtocol& dccex, lv_obj_t* parent)
 
     lv_obj_t* title = lv_label_create(title_row);
     lv_label_set_text(title, "Program CVs");
-    lv_obj_set_style_text_color(title, lv_color_make(38, 166, 154), 0);
+    lv_obj_set_style_text_color(title, tc(TC_SECTION), 0);
     lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t* back_btn = lv_btn_create(title_row);
     lv_obj_set_size(back_btn, LV_SIZE_CONTENT, 28);
     lv_obj_set_style_pad_hor(back_btn, 10, 0);
-    lv_obj_set_style_bg_color(back_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_set_style_bg_color(back_btn, tc(TC_SURFACE_RAISED), 0);
     lv_obj_align(back_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     lv_obj_t* back_lbl = lv_label_create(back_btn);
     lv_label_set_text(back_lbl, "Back");
@@ -59,7 +60,7 @@ ProgramUI::ProgramUI(DCCEXProtocol& dccex, lv_obj_t* parent)
     auto add_section = [&](const char* text) {
         lv_obj_t* lbl = lv_label_create(_container);
         lv_label_set_text(lbl, text);
-        lv_obj_set_style_text_color(lbl, lv_color_make(38, 166, 154), 0);
+        lv_obj_set_style_text_color(lbl, tc(TC_SECTION), 0);
         lv_obj_set_width(lbl, LV_PCT(100));
         lv_obj_set_style_pad_top(lbl, 4, 0);
     };
@@ -82,7 +83,7 @@ ProgramUI::ProgramUI(DCCEXProtocol& dccex, lv_obj_t* parent)
         lv_obj_t* btn = lv_btn_create(row);
         lv_obj_set_flex_grow(btn, 1);
         lv_obj_set_height(btn, 32);
-        lv_obj_set_style_bg_color(btn, lv_color_hex(0x2e2e2e), 0);
+        lv_obj_set_style_bg_color(btn, tc(TC_SURFACE_RAISED), 0);
         lv_obj_t* lbl = lv_label_create(btn);
         lv_label_set_text(lbl, label);
         lv_obj_center(lbl);
@@ -112,11 +113,11 @@ ProgramUI::ProgramUI(DCCEXProtocol& dccex, lv_obj_t* parent)
         lv_obj_set_height(chip, 26);
         lv_obj_set_style_pad_hor(chip, 2, 0);
         lv_obj_set_style_pad_ver(chip, 0, 0);
-        lv_obj_set_style_bg_color(chip, lv_color_hex(0x1a3a3a), 0);
+        lv_obj_set_style_bg_color(chip, tc(TC_TEAL_BG), 0);
         lv_obj_t* chip_lbl = lv_label_create(chip);
         lv_label_set_text(chip_lbl, p.name);
         lv_obj_set_style_text_font(chip_lbl, &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(chip_lbl, lv_color_make(38, 166, 154), 0);
+        lv_obj_set_style_text_color(chip_lbl, tc(TC_SECTION), 0);
         lv_obj_center(chip_lbl);
         lv_obj_set_user_data(chip, (void*)(uintptr_t)p.cv);
         lv_obj_add_event_cb(chip, preset_cv_event_cb, LV_EVENT_CLICKED, this);
@@ -139,13 +140,13 @@ ProgramUI::ProgramUI(DCCEXProtocol& dccex, lv_obj_t* parent)
         lv_obj_t* btn = lv_btn_create(ack_row);
         lv_obj_set_flex_grow(btn, 1);
         lv_obj_set_height(btn, 28);
-        lv_obj_set_style_bg_color(btn, lv_color_hex(0x222222), 0);
+        lv_obj_set_style_bg_color(btn, tc(TC_SURFACE_DEEP), 0);
         lv_obj_set_style_border_width(btn, 1, 0);
-        lv_obj_set_style_border_color(btn, lv_color_hex(0x383838), 0);
+        lv_obj_set_style_border_color(btn, tc(TC_BORDER), 0);
         lv_obj_t* lbl = lv_label_create(btn);
         lv_label_set_text(lbl, labels[i]);
         lv_obj_set_style_text_font(lbl, &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(lbl, lv_color_hex(0x777777), 0);
+        lv_obj_set_style_text_color(lbl, tc(TC_TEXT_HINT), 0);
         lv_obj_center(lbl);
         lv_obj_set_user_data(btn, (void*)(uintptr_t)(6 + i));
         lv_obj_add_event_cb(btn, menu_btn_event_cb, LV_EVENT_CLICKED, this);
@@ -269,7 +270,7 @@ void ProgramUI::newStep(Step step, const char* title, uint16_t max, uint16_t min
     lv_obj_set_width(_msgbox, LV_PCT(100));
     lv_obj_align(_msgbox, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_add_event_cb(_msgbox, msgbox_delete_cb, LV_EVENT_DELETE, this);
-    style_popup_title(_msgbox, title, lv_color_make(38, 166, 154));
+    style_popup_title(_msgbox, title, tc(TC_SECTION));
 
     _ta = lv_textarea_create(_msgbox);
     lv_obj_set_width(_ta, LV_PCT(100));
@@ -278,7 +279,7 @@ void ProgramUI::newStep(Step step, const char* title, uint16_t max, uint16_t min
     lv_textarea_set_max_length(_ta, 5);
 
     lv_obj_t* cancel_btn = lv_msgbox_add_footer_button(_msgbox, "Cancel");
-    lv_obj_set_style_bg_color(cancel_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_set_style_bg_color(cancel_btn, tc(TC_SURFACE_RAISED), 0);
     lv_obj_add_event_cb(cancel_btn, msgbox_close_cb, LV_EVENT_CLICKED, this);
 
     _keyboard = lv_keyboard_create(_container);
@@ -305,7 +306,7 @@ void ProgramUI::working() {
     lv_obj_set_width(_msgbox, LV_PCT(100));
     lv_obj_align(_msgbox, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_add_event_cb(_msgbox, msgbox_delete_cb, LV_EVENT_DELETE, this);
-    style_popup_title(_msgbox, "Working...", lv_color_hex(0x888888));
+    style_popup_title(_msgbox, "Working...", tc(TC_TEXT_HINT));
 }
 
 void ProgramUI::result(const char* message, lv_color_t color) {
@@ -316,7 +317,7 @@ void ProgramUI::result(const char* message, lv_color_t color) {
     lv_obj_align(_msgbox, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_add_event_cb(_msgbox, msgbox_delete_cb, LV_EVENT_DELETE, this);
     style_popup_title(_msgbox, message, color);
-    lv_obj_t* ok = make_popup_btn(_msgbox, "OK", lv_color_hex(0x2e2e2e));
+    lv_obj_t* ok = make_popup_btn(_msgbox, "OK", tc(TC_SURFACE_RAISED));
     lv_obj_add_event_cb(ok, msgbox_close_cb, LV_EVENT_CLICKED, this);
 }
 
@@ -331,11 +332,11 @@ void ProgramUI::resultWithWriteBack(int cv, int value) {
     char title[32]; snprintf(title, sizeof(title), "CV %d  =  %d", cv, value);
     style_popup_title(_msgbox, title, lv_color_make(76, 175, 80));
 
-    lv_obj_t* write_btn = make_popup_btn(_msgbox, "Write new value", lv_color_hex(0x1a3a3a));
-    lv_obj_set_style_text_color(lv_obj_get_child(write_btn, 0), lv_color_make(38, 166, 154), 0);
+    lv_obj_t* write_btn = make_popup_btn(_msgbox, "Write new value", tc(TC_TEAL_BG));
+    lv_obj_set_style_text_color(lv_obj_get_child(write_btn, 0), tc(TC_SECTION), 0);
     lv_obj_add_event_cb(write_btn, write_back_btn_cb, LV_EVENT_CLICKED, this);
 
-    lv_obj_t* ok = make_popup_btn(_msgbox, "OK", lv_color_hex(0x2e2e2e));
+    lv_obj_t* ok = make_popup_btn(_msgbox, "OK", tc(TC_SURFACE_RAISED));
     lv_obj_add_event_cb(ok, msgbox_close_cb, LV_EVENT_CLICKED, this);
 }
 
@@ -352,16 +353,16 @@ void ProgramUI::confirm(const char* message) {
     lv_obj_set_width(_msgbox, LV_PCT(100));
     lv_obj_align(_msgbox, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_add_event_cb(_msgbox, msgbox_delete_cb, LV_EVENT_DELETE, this);
-    style_popup_title(_msgbox, "Confirm", lv_color_make(38, 166, 154));
+    style_popup_title(_msgbox, "Confirm", tc(TC_SECTION));
 
     lv_obj_t* txt = lv_msgbox_add_text(_msgbox, message);
     lv_obj_set_style_text_font(txt, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(txt, lv_color_hex(0xaaaaaa), 0);
+    lv_obj_set_style_text_color(txt, tc(TC_OVERLAY_TEXT), 0);
 
     lv_obj_t* yes_btn = make_popup_btn(_msgbox, "Write", lv_color_make(40, 140, 40));
     lv_obj_add_event_cb(yes_btn, confirm_btn_event_cb, LV_EVENT_CLICKED, this);
 
-    lv_obj_t* no_btn = make_popup_btn(_msgbox, "Cancel", lv_color_hex(0x2e2e2e));
+    lv_obj_t* no_btn = make_popup_btn(_msgbox, "Cancel", tc(TC_SURFACE_RAISED));
     lv_obj_add_event_cb(no_btn, msgbox_close_cb, LV_EVENT_CLICKED, this);
 }
 

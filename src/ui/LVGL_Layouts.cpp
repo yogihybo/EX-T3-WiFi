@@ -1,4 +1,5 @@
 #include "LVGL_Layouts.h"
+#include "Theme.h"
 
 LV_FONT_DECLARE(fa_gauge_high_16);
 LV_FONT_DECLARE(fa_icons_18);
@@ -34,7 +35,7 @@ static lv_obj_t* make_signal_bars(lv_obj_t* parent) {
         lv_obj_set_pos(bar, i * 5, 18 - heights[i]);
         lv_obj_set_style_radius(bar, 1, 0);
         lv_obj_set_style_border_width(bar, 0, 0);
-        lv_obj_set_style_bg_color(bar, lv_color_hex(0x555555), 0);
+        lv_obj_set_style_bg_color(bar, tc(TC_ICON_INACTIVE), 0);
     }
     return cont;
 }
@@ -59,37 +60,50 @@ static lv_obj_t* make_dcc_waveform(lv_obj_t* parent) {
     lv_obj_t* line = lv_line_create(cont);
     lv_line_set_points(line, pts, sizeof(pts) / sizeof(pts[0]));
     lv_obj_set_style_line_width(line, 2, 0);
-    lv_obj_set_style_line_color(line, lv_color_hex(0x555555), 0);
+    lv_obj_set_style_line_color(line, tc(TC_ICON_INACTIVE), 0);
     lv_obj_set_pos(line, 0, 0);
     return cont;
 }
 
 #include <Settings.h>
 
-// Custom dark theme override: strips the blue tint from LVGL's default dark palette.
-// Runs AFTER the base theme so only bg/border colors on plain containers are changed.
-static lv_theme_t* custom_dark_theme = nullptr;
+// Custom theme overrides — strip the blue tint from LVGL's default palette
+// and enforce a clean neutral colour hierarchy. Runs AFTER the base theme
+// so only bg/border on plain containers are affected.
+static lv_theme_t* custom_dark_theme  = nullptr;
+static lv_theme_t* custom_light_theme = nullptr;
 
 static void dark_override_cb(lv_theme_t* th, lv_obj_t* obj) {
     LV_UNUSED(th);
     if (!lv_obj_check_type(obj, &lv_obj_class)) return;
-
     if (lv_obj_get_parent(obj) == NULL) {
-        // Screen — pure near-black
         lv_obj_set_style_bg_color(obj, lv_color_hex(0x0a0a0a), 0);
     } else {
-        // Panel / container — neutral dark grey, no blue tint
         lv_obj_set_style_bg_color(obj, lv_color_hex(0x1a1a1a), 0);
         lv_obj_set_style_border_color(obj, lv_color_hex(0x333333), 0);
     }
 }
 
+static void light_override_cb(lv_theme_t* th, lv_obj_t* obj) {
+    LV_UNUSED(th);
+    // Force dark text on all widget types so nothing renders white-on-white
+    lv_obj_set_style_text_color(obj, lv_color_hex(0x111111), 0);
+
+    if (!lv_obj_check_type(obj, &lv_obj_class)) return;
+    if (lv_obj_get_parent(obj) == NULL) {
+        lv_obj_set_style_bg_color(obj, lv_color_hex(0xf0f0f0), 0);
+    } else {
+        lv_obj_set_style_bg_color(obj, lv_color_hex(0xf5f5f5), 0);
+        lv_obj_set_style_border_color(obj, lv_color_hex(0xdddddd), 0);
+    }
+}
+
 void apply_theme() {
     bool is_dark = (Settings.theme == SettingsClass::Theme::DARK);
-    lv_disp_t * disp = lv_disp_get_default();
-    lv_theme_t * base = lv_theme_default_init(disp,
-        lv_color_make(50, 150, 255),  /* Palette primary */
-        lv_color_make(255, 50, 50),   /* Palette secondary */
+    lv_disp_t* disp = lv_disp_get_default();
+    lv_theme_t* base = lv_theme_default_init(disp,
+        lv_color_make(50, 150, 255),
+        lv_color_make(255, 50, 50),
         is_dark,
         &lv_font_montserrat_14);
 
@@ -99,9 +113,11 @@ void apply_theme() {
         lv_theme_set_apply_cb(custom_dark_theme, dark_override_cb);
         lv_disp_set_theme(disp, custom_dark_theme);
     } else {
-        lv_disp_set_theme(disp, base);
+        if (!custom_light_theme) custom_light_theme = lv_theme_create();
+        lv_theme_set_parent(custom_light_theme, base);
+        lv_theme_set_apply_cb(custom_light_theme, light_override_cb);
+        lv_disp_set_theme(disp, custom_light_theme);
     }
-
 }
 
 // Creates the header bar and all status widgets. Safe to call multiple times.
@@ -131,7 +147,7 @@ static void create_header_bar() {
     train_img = lv_label_create(loco_group);
     lv_label_set_text(train_img, "\xEF\x88\xB8");  // U+F238 fa-train
     lv_obj_set_style_text_font(train_img, &fa_icons_18, 0);
-    lv_obj_set_style_text_color(train_img, lv_color_hex(0xcccccc), 0);
+    lv_obj_set_style_text_color(train_img, tc(TC_TEXT_SECONDARY), 0);
     lv_obj_set_style_pad_left(train_img, 10, 0);
     lv_obj_set_style_pad_top(train_img, -4, 0);           // compress flex layout height
     lv_obj_set_style_pad_bottom(train_img, -4, 0);
@@ -142,7 +158,7 @@ static void create_header_bar() {
     loco_label = lv_label_create(loco_group);
     lv_label_set_text(loco_label, "000");
     lv_obj_set_style_text_font(loco_label, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(loco_label, lv_color_hex(0x999999), 0);
+    lv_obj_set_style_text_color(loco_label, tc(TC_TEXT_HINT), 0);
     lv_obj_set_style_translate_y(loco_label, 3, 0);
 
     // CS signal bars + "DCC" label stacked in a column
@@ -161,7 +177,7 @@ static void create_header_bar() {
     lv_obj_t* cs_lbl = lv_label_create(cs_group);
     lv_label_set_text(cs_lbl, "DCC");
     lv_obj_set_style_text_font(cs_lbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(cs_lbl, lv_color_hex(0x999999), 0);
+    lv_obj_set_style_text_color(cs_lbl, tc(TC_TEXT_HINT), 0);
 
     lv_obj_t* spacer = lv_obj_create(header_bar);
     lv_obj_set_height(spacer, 0);
@@ -185,7 +201,7 @@ static void create_header_bar() {
     lv_obj_t* wifi_lbl = lv_label_create(wifi_group);
     lv_label_set_text(wifi_lbl, "WiFi");
     lv_obj_set_style_text_font(wifi_lbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(wifi_lbl, lv_color_hex(0x999999), 0);
+    lv_obj_set_style_text_color(wifi_lbl, tc(TC_TEXT_HINT), 0);
 
     // Battery icon + voltage label stacked in a column
     lv_obj_t* pwr_group = lv_obj_create(header_bar);
@@ -202,12 +218,12 @@ static void create_header_bar() {
     power_label = lv_label_create(pwr_group);
     lv_label_set_text(power_label, LV_SYMBOL_BATTERY_FULL);
     lv_obj_set_style_text_font(power_label, &lv_font_montserrat_16, 0);
-    lv_obj_set_style_text_color(power_label, lv_color_hex(0xcccccc), 0);
+    lv_obj_set_style_text_color(power_label, tc(TC_TEXT_SECONDARY), 0);
 
     voltage_label = lv_label_create(pwr_group);
     lv_label_set_text(voltage_label, "--");
     lv_obj_set_style_text_font(voltage_label, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(voltage_label, lv_color_hex(0x999999), 0);
+    lv_obj_set_style_text_color(voltage_label, tc(TC_TEXT_HINT), 0);
 }
 
 // Destroys and recreates the header bar so it picks up the current theme.
@@ -266,10 +282,10 @@ void create_main_ui() {
 
     lv_obj_t* tab_btns = lv_tabview_get_tab_bar(main_tabview);
     lv_obj_set_style_pad_all(tab_btns, 0, 0);
-    lv_obj_set_style_bg_color(tab_btns, lv_color_hex(0x1a1a1a), 0);
+    lv_obj_set_style_bg_color(tab_btns, tc(TC_SURFACE_DEEP), 0);
     lv_obj_set_style_border_width(tab_btns, 0, 0);
     lv_obj_set_style_border_side(tab_btns, LV_BORDER_SIDE_TOP, 0);
-    lv_obj_set_style_border_color(tab_btns, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_border_color(tab_btns, tc(TC_BORDER), 0);
     lv_obj_set_style_border_width(tab_btns, 1, 0);
 
     // UTF-8 for U+F625 gauge-high, U+F074 shuffle, U+F0E7 bolt, U+F013 gear
@@ -293,16 +309,16 @@ void create_main_ui() {
         lv_obj_set_style_pad_bottom(btn, 0, LV_STATE_CHECKED);
         lv_obj_set_style_pad_left(btn,   0, LV_STATE_CHECKED);
         lv_obj_set_style_pad_right(btn,  0, LV_STATE_CHECKED);
-        lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a1a1a), 0);
-        lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a1a1a), LV_STATE_CHECKED);
-        lv_obj_set_style_text_color(btn, lv_color_hex(0x666666), 0);
-        lv_obj_set_style_text_color(btn, lv_color_hex(0x4488ff), LV_STATE_CHECKED);
+        lv_obj_set_style_bg_color(btn, tc(TC_SURFACE_DEEP), 0);
+        lv_obj_set_style_bg_color(btn, tc(TC_SURFACE_DEEP), LV_STATE_CHECKED);
+        lv_obj_set_style_text_color(btn, tc(TC_TEXT_MUTED), 0);
+        lv_obj_set_style_text_color(btn, tc(TC_ACCENT), LV_STATE_CHECKED);
         lv_obj_set_style_border_width(btn, 2, 0);
         lv_obj_set_style_border_width(btn, 2, LV_STATE_CHECKED);
         lv_obj_set_style_border_side(btn, LV_BORDER_SIDE_TOP, 0);
         lv_obj_set_style_border_side(btn, LV_BORDER_SIDE_TOP, LV_STATE_CHECKED);
-        lv_obj_set_style_border_color(btn, lv_color_hex(0x333333), 0);
-        lv_obj_set_style_border_color(btn, lv_color_hex(0x4488ff), LV_STATE_CHECKED);
+        lv_obj_set_style_border_color(btn, tc(TC_BORDER), 0);
+        lv_obj_set_style_border_color(btn, tc(TC_ACCENT), LV_STATE_CHECKED);
         lv_obj_set_style_shadow_width(btn, 0, 0);
         lv_obj_set_style_shadow_width(btn, 0, LV_STATE_CHECKED);
     }
@@ -319,7 +335,7 @@ void set_header_loco_count(int count) {
 
 static void fill_bars(lv_obj_t* bars[4], int level, lv_color_t on_color) {
     for (int i = 0; i < 4; i++)
-        if (bars[i]) lv_obj_set_style_bg_color(bars[i], i < level ? on_color : lv_color_hex(0x555555), 0);
+        if (bars[i]) lv_obj_set_style_bg_color(bars[i], i < level ? on_color : tc(TC_ICON_INACTIVE), 0);
 }
 
 void set_header_wifi_status(bool connected, int rssi) {
@@ -330,12 +346,12 @@ void set_header_wifi_status(bool connected, int rssi) {
         else if (rssi > -80) level = 2;
         else                 level = 1;
     }
-    fill_bars(wifi_bars, level, lv_color_hex(0xcccccc));
+    fill_bars(wifi_bars, level, tc(TC_ICON_ACTIVE));
 }
 
 void set_header_cs_status(bool connected) {
     if (cs_wave)
-        lv_obj_set_style_line_color(cs_wave, connected ? lv_color_hex(0xcccccc) : lv_color_hex(0x555555), 0);
+        lv_obj_set_style_line_color(cs_wave, connected ? tc(TC_ICON_ACTIVE) : tc(TC_ICON_INACTIVE), 0);
     // Rear LED: green when connected, red otherwise (active LOW)
     digitalWrite(LED_G, connected ? LOW : HIGH);
     digitalWrite(LED_R, connected ? HIGH : LOW);

@@ -1,4 +1,5 @@
 #include "WiFiUI.h"
+#include "Theme.h"
 
 static const int KB_HEIGHT = 165;
 
@@ -33,13 +34,13 @@ WiFiUI::WiFiUI(lv_obj_t* parent) {
 
     lv_obj_t* title = lv_label_create(title_row);
     lv_label_set_text(title, "WiFi & CS settings");
-    lv_obj_set_style_text_color(title, lv_color_make(38, 166, 154), 0);
+    lv_obj_set_style_text_color(title, tc(TC_SECTION), 0);
     lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t* back_btn = lv_btn_create(title_row);
     lv_obj_set_size(back_btn, LV_SIZE_CONTENT, 28);
     lv_obj_set_style_pad_hor(back_btn, 10, 0);
-    lv_obj_set_style_bg_color(back_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_set_style_bg_color(back_btn, tc(TC_SURFACE_RAISED), 0);
     lv_obj_align(back_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     lv_obj_t* back_lbl = lv_label_create(back_btn);
     lv_label_set_text(back_lbl, "Back");
@@ -49,7 +50,7 @@ WiFiUI::WiFiUI(lv_obj_t* parent) {
     auto add_section = [this](const char* title) {
         lv_obj_t* lbl = lv_label_create(_container);
         lv_label_set_text(lbl, title);
-        lv_obj_set_style_text_color(lbl, lv_color_make(38, 166, 154), 0);
+        lv_obj_set_style_text_color(lbl, tc(TC_SECTION), 0);
         lv_obj_set_width(lbl, LV_PCT(100));
         lv_obj_set_style_pad_top(lbl, 6, 0);
     };
@@ -58,7 +59,7 @@ WiFiUI::WiFiUI(lv_obj_t* parent) {
         lv_obj_t* lbl = lv_label_create(_container);
         lv_label_set_text(lbl, text);
         lv_obj_set_width(lbl, LV_PCT(100));
-        lv_obj_set_style_text_color(lbl, lv_color_hex(0x888888), 0);
+        lv_obj_set_style_text_color(lbl, tc(TC_TEXT_HINT), 0);
         lv_obj_set_style_text_font(lbl, &lv_font_montserrat_12, 0);
         lv_obj_set_style_pad_top(lbl, 2, 0);
     };
@@ -100,7 +101,7 @@ WiFiUI::WiFiUI(lv_obj_t* parent) {
         lv_label_set_text_fmt(_labelIP, "IP: %s", WiFi.localIP().toString().c_str());
     else
         lv_label_set_text(_labelIP, "IP: Not connected");
-    lv_obj_set_style_text_color(_labelIP, lv_color_hex(0x555555), 0);
+    lv_obj_set_style_text_color(_labelIP, tc(TC_TEXT_MUTED), 0);
     lv_obj_set_style_text_font(_labelIP, &lv_font_montserrat_12, 0);
     lv_obj_set_style_pad_top(_labelIP, 4, 0);
 
@@ -109,7 +110,7 @@ WiFiUI::WiFiUI(lv_obj_t* parent) {
 
     lv_obj_t* ap_lbl = lv_label_create(_container);
     lv_label_set_text_fmt(ap_lbl, "SSID: %s\nPassword: %s", Settings.AP.SSID.c_str(), Settings.AP.password.c_str());
-    lv_obj_set_style_text_color(ap_lbl, lv_color_hex(0x888888), 0);
+    lv_obj_set_style_text_color(ap_lbl, tc(TC_TEXT_HINT), 0);
     lv_obj_set_style_text_font(ap_lbl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_pad_top(ap_lbl, 2, 0);
 

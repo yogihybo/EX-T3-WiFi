@@ -1,4 +1,5 @@
 #include "LocoUI.h"
+#include "Theme.h"
 #include <FileSystems.h>
 #include <SD.h>
 #include <Settings.h>
@@ -87,8 +88,8 @@ void LocoUI::onLocoUpdate(Loco* loco) {
             if (newDir) lv_obj_add_state(_dirBtn, LV_STATE_CHECKED);
             else        lv_obj_remove_state(_dirBtn, LV_STATE_CHECKED);
         }
-        if (_dirFwdLabel) lv_obj_set_style_text_color(_dirFwdLabel, newDir ? lv_color_hex(0xffffff) : lv_color_hex(0x555555), 0);
-        if (_dirRevLabel) lv_obj_set_style_text_color(_dirRevLabel, newDir ? lv_color_hex(0x555555) : lv_color_hex(0xffffff), 0);
+        if (_dirFwdLabel) lv_obj_set_style_text_color(_dirFwdLabel, newDir ? tc(TC_TEXT_PRIMARY) : tc(TC_TEXT_MUTED), 0);
+        if (_dirRevLabel) lv_obj_set_style_text_color(_dirRevLabel, newDir ? tc(TC_TEXT_MUTED) : tc(TC_TEXT_PRIMARY), 0);
         _loco.direction = newDir;
     }
 
@@ -108,8 +109,8 @@ void LocoUI::buildSelectionMenu() {
     _selectionMenu = lv_obj_create(_container);
     lv_obj_set_size(_selectionMenu, LV_PCT(90), LV_PCT(95));
     lv_obj_align(_selectionMenu, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_bg_color(_selectionMenu, lv_color_hex(0x1e1e1e), 0);
-    lv_obj_set_style_border_color(_selectionMenu, lv_color_hex(0x383838), 0);
+    lv_obj_set_style_bg_color(_selectionMenu, tc(TC_OVERLAY_BG), 0);
+    lv_obj_set_style_border_color(_selectionMenu, tc(TC_OVERLAY_BORDER), 0);
     lv_obj_set_style_border_width(_selectionMenu, 1, 0);
     lv_obj_set_style_radius(_selectionMenu, 8, 0);
     lv_obj_set_style_pad_all(_selectionMenu, 8, 0);
@@ -129,13 +130,13 @@ void LocoUI::buildSelectionMenu() {
 
     lv_obj_t* title = lv_label_create(title_row);
     lv_label_set_text(title, "Select Locomotive");
-    lv_obj_set_style_text_color(title, lv_color_make(38, 166, 154), 0);
+    lv_obj_set_style_text_color(title, tc(TC_SECTION), 0);
     lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t* close_btn = lv_btn_create(title_row);
     lv_obj_set_size(close_btn, LV_SIZE_CONTENT, 28);
     lv_obj_set_style_pad_hor(close_btn, 10, 0);
-    lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_set_style_bg_color(close_btn, tc(TC_SURFACE_RAISED), 0);
     lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     lv_obj_t* close_lbl = lv_label_create(close_btn);
     lv_label_set_text(close_lbl, "Back");
@@ -153,10 +154,10 @@ void LocoUI::buildSelectionMenu() {
         lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, this);
     };
 
-    make_menu_btn("By Address", addr_btn_event_cb,    lv_color_hex(0x2e2e2e));
-    make_menu_btn("By Name",    name_btn_event_cb,    lv_color_hex(0x2e2e2e));
-    make_menu_btn("By Group",   group_btn_event_cb,   lv_color_hex(0x2e2e2e));
-    make_menu_btn("By Consist", consist_btn_event_cb, lv_color_hex(0x2e2e2e));
+    make_menu_btn("By Address", addr_btn_event_cb,    tc(TC_SURFACE_RAISED));
+    make_menu_btn("By Name",    name_btn_event_cb,    tc(TC_SURFACE_RAISED));
+    make_menu_btn("By Group",   group_btn_event_cb,   tc(TC_SURFACE_RAISED));
+    make_menu_btn("By Consist", consist_btn_event_cb, tc(TC_SURFACE_RAISED));
     make_menu_btn("Release",    release_btn_event_cb, lv_color_make(140, 40, 40));
 }
 
@@ -185,7 +186,7 @@ void LocoUI::buildControlScreen() {
 
     _nameLabel = lv_label_create(_container);
     lv_label_set_text(_nameLabel, _locoName.c_str());
-    lv_obj_set_style_text_color(_nameLabel, lv_color_hex(0xbbbbbb), 0);
+    lv_obj_set_style_text_color(_nameLabel, tc(TC_TEXT_SECONDARY), 0);
     lv_obj_set_style_text_font(_nameLabel, &lv_font_montserrat_12, 0);
     lv_obj_align(_nameLabel, LV_ALIGN_TOP_MID, 0, 4);
 
@@ -193,8 +194,8 @@ void LocoUI::buildControlScreen() {
     lv_obj_t* prev_btn = _prevBtn;
     lv_obj_set_size(prev_btn, 36, 36);
     lv_obj_align(prev_btn, LV_ALIGN_TOP_LEFT, 2, 11);
-    lv_obj_set_style_bg_color(prev_btn, lv_color_hex(0x2e2e2e), 0);
-    lv_obj_set_style_border_color(prev_btn, lv_color_hex(0x555555), 0);
+    lv_obj_set_style_bg_color(prev_btn, tc(TC_SURFACE_RAISED), 0);
+    lv_obj_set_style_border_color(prev_btn, tc(TC_BORDER_STRONG), 0);
     lv_obj_set_style_border_width(prev_btn, 1, 0);
     lv_obj_set_style_shadow_width(prev_btn, 8, 0);
     lv_obj_set_style_shadow_color(prev_btn, lv_color_hex(0x000000), 0);
@@ -204,7 +205,7 @@ void LocoUI::buildControlScreen() {
     lv_obj_t* pl = lv_label_create(prev_btn);
     lv_label_set_text(pl, "\xEF\x81\xA0");  // FA arrow-left U+F060
     lv_obj_set_style_text_font(pl, &fa_icons_18, 0);
-    lv_obj_set_style_text_color(pl, lv_color_hex(0xcccccc), 0);
+    lv_obj_set_style_text_color(pl, tc(TC_TEXT_SECONDARY), 0);
     lv_obj_center(pl);
     lv_obj_add_event_cb(prev_btn, nav_btn_event_cb, LV_EVENT_CLICKED, this);
     lv_obj_set_user_data(prev_btn, (void*)0);
@@ -248,15 +249,15 @@ void LocoUI::buildControlScreen() {
 
     lv_obj_align(addr_btn, LV_ALIGN_TOP_MID, 0, 14);
     if (!_activeConsist)
-        lv_obj_set_style_text_color(_addressLabel, lv_color_hex(0xffffff), 0);
+        lv_obj_set_style_text_color(_addressLabel, tc(TC_TEXT_PRIMARY), 0);
     lv_obj_center(_addressLabel);
 
     _nextBtn = lv_btn_create(_container);
     lv_obj_t* next_btn = _nextBtn;
     lv_obj_set_size(next_btn, 36, 36);
     lv_obj_align(next_btn, LV_ALIGN_TOP_RIGHT, -2, 11);
-    lv_obj_set_style_bg_color(next_btn, lv_color_hex(0x2e2e2e), 0);
-    lv_obj_set_style_border_color(next_btn, lv_color_hex(0x555555), 0);
+    lv_obj_set_style_bg_color(next_btn, tc(TC_SURFACE_RAISED), 0);
+    lv_obj_set_style_border_color(next_btn, tc(TC_BORDER_STRONG), 0);
     lv_obj_set_style_border_width(next_btn, 1, 0);
     lv_obj_set_style_shadow_width(next_btn, 8, 0);
     lv_obj_set_style_shadow_color(next_btn, lv_color_hex(0x000000), 0);
@@ -266,7 +267,7 @@ void LocoUI::buildControlScreen() {
     lv_obj_t* nl = lv_label_create(next_btn);
     lv_label_set_text(nl, "\xEF\x81\xA1");  // FA arrow-right U+F061
     lv_obj_set_style_text_font(nl, &fa_icons_18, 0);
-    lv_obj_set_style_text_color(nl, lv_color_hex(0xcccccc), 0);
+    lv_obj_set_style_text_color(nl, tc(TC_TEXT_SECONDARY), 0);
     lv_obj_center(nl);
     lv_obj_add_event_cb(next_btn, nav_btn_event_cb, LV_EVENT_CLICKED, this);
     lv_obj_set_user_data(next_btn, (void*)1);
@@ -283,7 +284,7 @@ void LocoUI::buildControlScreen() {
     lv_arc_set_range(_speedArc, 0, 126);
     lv_arc_set_value(_speedArc, _loco.speed);
 
-    lv_obj_set_style_arc_color(_speedArc, lv_color_hex(0x363636), LV_PART_MAIN);
+    lv_obj_set_style_arc_color(_speedArc, tc(TC_SURFACE_RAISED), LV_PART_MAIN);
     lv_obj_set_style_arc_width(_speedArc, 10, LV_PART_MAIN);
     lv_obj_set_style_arc_width(_speedArc, 10, LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(_speedArc, lv_color_hex(0x4488ff), LV_PART_KNOB);
@@ -302,7 +303,7 @@ void LocoUI::buildControlScreen() {
     lv_obj_t* unitLbl = lv_label_create(_speedArc);
     lv_label_set_text(unitLbl, "km/h");
     lv_obj_set_style_text_font(unitLbl, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(unitLbl, lv_color_hex(0x888888), 0);
+    lv_obj_set_style_text_color(unitLbl, tc(TC_TEXT_HINT), 0);
     lv_obj_align(unitLbl, LV_ALIGN_CENTER, 0, 14);
 
     // Large circular stop button — bottom right
@@ -336,7 +337,7 @@ void LocoUI::buildControlScreen() {
     _dirRevLabel = lv_label_create(dir_row);
     lv_label_set_text(_dirRevLabel, "REV");
     lv_obj_set_style_text_font(_dirRevLabel, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(_dirRevLabel, _loco.direction ? lv_color_hex(0x555555) : lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_text_color(_dirRevLabel, _loco.direction ? tc(TC_TEXT_MUTED) : tc(TC_TEXT_PRIMARY), 0);
 
     _dirBtn = lv_switch_create(dir_row);
     lv_obj_set_size(_dirBtn, 52, 26);
@@ -349,7 +350,7 @@ void LocoUI::buildControlScreen() {
     _dirFwdLabel = lv_label_create(dir_row);
     lv_label_set_text(_dirFwdLabel, "FWD");
     lv_obj_set_style_text_font(_dirFwdLabel, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(_dirFwdLabel, _loco.direction ? lv_color_hex(0xffffff) : lv_color_hex(0x555555), 0);
+    lv_obj_set_style_text_color(_dirFwdLabel, _loco.direction ? tc(TC_TEXT_PRIMARY) : tc(TC_TEXT_MUTED), 0);
 
     // Fn page button — circle on the left, mirroring the stop button
     _pageBtn = lv_btn_create(_container);
@@ -357,9 +358,9 @@ void LocoUI::buildControlScreen() {
     lv_obj_set_size(page_btn, 52, 52);
     lv_obj_align(page_btn, LV_ALIGN_BOTTOM_LEFT, 6, -6);
     lv_obj_set_style_radius(page_btn, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(page_btn, lv_color_hex(0x2e2e2e), 0);
-    lv_obj_set_style_bg_color(page_btn, lv_color_hex(0x484848), LV_STATE_PRESSED);
-    lv_obj_set_style_border_color(page_btn, lv_color_hex(0x555555), 0);
+    lv_obj_set_style_bg_color(page_btn, tc(TC_SURFACE_RAISED), 0);
+    lv_obj_set_style_bg_color(page_btn, tc(TC_BORDER_STRONG), LV_STATE_PRESSED);
+    lv_obj_set_style_border_color(page_btn, tc(TC_BORDER_STRONG), 0);
     lv_obj_set_style_border_width(page_btn, 1, 0);
     lv_obj_set_style_shadow_width(page_btn, 8, 0);
     lv_obj_set_style_shadow_color(page_btn, lv_color_hex(0x000000), 0);
@@ -425,18 +426,14 @@ void LocoUI::buildFunctionButtons(JsonDocument& locoDoc) {
     }
 
     static lv_style_t fn_btn_base_style;
-    static bool fn_btn_style_init = false;
-    if (!fn_btn_style_init) {
-        lv_style_init(&fn_btn_base_style);
-        lv_style_set_radius(&fn_btn_base_style, LV_RADIUS_CIRCLE);
-        lv_style_set_bg_color(&fn_btn_base_style, lv_color_hex(0x2e2e2e));
-        lv_style_set_border_color(&fn_btn_base_style, lv_color_hex(0x555555));
-        lv_style_set_border_width(&fn_btn_base_style, 1);
-        lv_style_set_shadow_width(&fn_btn_base_style, 8);
-        lv_style_set_shadow_color(&fn_btn_base_style, lv_color_hex(0x000000));
-        lv_style_set_shadow_opa(&fn_btn_base_style, LV_OPA_40);
-        fn_btn_style_init = true;
-    }
+    lv_style_init(&fn_btn_base_style);
+    lv_style_set_radius(&fn_btn_base_style, LV_RADIUS_CIRCLE);
+    lv_style_set_bg_color(&fn_btn_base_style, tc(TC_SURFACE_RAISED));
+    lv_style_set_border_color(&fn_btn_base_style, tc(TC_BORDER_STRONG));
+    lv_style_set_border_width(&fn_btn_base_style, 1);
+    lv_style_set_shadow_width(&fn_btn_base_style, 8);
+    lv_style_set_shadow_color(&fn_btn_base_style, lv_color_hex(0x000000));
+    lv_style_set_shadow_opa(&fn_btn_base_style, LV_OPA_40);
 
     for (JsonArrayConst const& row : locoFunctions) {
         for (JsonObjectConst const& fn : row) {
@@ -578,7 +575,7 @@ void LocoUI::showKeypad() {
     _keyboard = lv_obj_create(_container);
     lv_obj_set_size(_keyboard, LV_PCT(100), LV_PCT(100));
     lv_obj_align(_keyboard, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_bg_color(_keyboard, lv_color_hex(0x1e1e1e), 0);
+    lv_obj_set_style_bg_color(_keyboard, tc(TC_OVERLAY_BG), 0);
     lv_obj_set_style_border_width(_keyboard, 0, 0);
     lv_obj_set_style_pad_all(_keyboard, 8, 0);
     lv_obj_set_style_pad_row(_keyboard, 5, 0);
@@ -594,13 +591,13 @@ void LocoUI::showKeypad() {
 
     lv_obj_t* title = lv_label_create(title_row);
     lv_label_set_text(title, "Select By Address");
-    lv_obj_set_style_text_color(title, lv_color_make(38, 166, 154), 0);
+    lv_obj_set_style_text_color(title, tc(TC_SECTION), 0);
     lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t* close_btn = lv_btn_create(title_row);
     lv_obj_set_size(close_btn, LV_SIZE_CONTENT, 28);
     lv_obj_set_style_pad_hor(close_btn, 10, 0);
-    lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_set_style_bg_color(close_btn, tc(TC_SURFACE_RAISED), 0);
     lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     lv_obj_t* close_lbl = lv_label_create(close_btn);
     lv_label_set_text(close_lbl, "Back");
@@ -700,8 +697,8 @@ void LocoUI::name_btn_event_cb(lv_event_t * e) {
     ui->_nameMenu = lv_obj_create(ui->_container);
     lv_obj_set_size(ui->_nameMenu, LV_PCT(90), LV_PCT(95));
     lv_obj_align(ui->_nameMenu, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_bg_color(ui->_nameMenu, lv_color_hex(0x1e1e1e), 0);
-    lv_obj_set_style_border_color(ui->_nameMenu, lv_color_hex(0x383838), 0);
+    lv_obj_set_style_bg_color(ui->_nameMenu, tc(TC_OVERLAY_BG), 0);
+    lv_obj_set_style_border_color(ui->_nameMenu, tc(TC_OVERLAY_BORDER), 0);
     lv_obj_set_style_border_width(ui->_nameMenu, 1, 0);
     lv_obj_set_style_radius(ui->_nameMenu, 8, 0);
     lv_obj_set_style_pad_all(ui->_nameMenu, 8, 0);
@@ -718,13 +715,13 @@ void LocoUI::name_btn_event_cb(lv_event_t * e) {
 
     lv_obj_t* title = lv_label_create(title_row);
     lv_label_set_text(title, "Select By Name");
-    lv_obj_set_style_text_color(title, lv_color_make(38, 166, 154), 0);
+    lv_obj_set_style_text_color(title, tc(TC_SECTION), 0);
     lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t* close_btn = lv_btn_create(title_row);
     lv_obj_set_size(close_btn, LV_SIZE_CONTENT, 28);
     lv_obj_set_style_pad_hor(close_btn, 10, 0);
-    lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_set_style_bg_color(close_btn, tc(TC_SURFACE_RAISED), 0);
     lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     lv_obj_t* close_lbl = lv_label_create(close_btn);
     lv_label_set_text(close_lbl, "Back");
@@ -760,7 +757,7 @@ void LocoUI::name_btn_event_cb(lv_event_t * e) {
                     lv_obj_t* btn = lv_btn_create(list);
                     lv_obj_set_width(btn, LV_PCT(100));
                     lv_obj_set_height(btn, 36);
-                    lv_obj_set_style_bg_color(btn, lv_color_hex(0x2e2e2e), 0);
+                    lv_obj_set_style_bg_color(btn, tc(TC_SURFACE_RAISED), 0);
                     lv_obj_t* lbl = lv_label_create(btn);
                     lv_label_set_text(lbl, nameStr);
                     lv_obj_center(lbl);
@@ -814,8 +811,8 @@ void LocoUI::group_btn_event_cb(lv_event_t * e) {
     ui->_nameMenu = lv_obj_create(ui->_container);
     lv_obj_set_size(ui->_nameMenu, LV_PCT(90), LV_PCT(95));
     lv_obj_align(ui->_nameMenu, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_bg_color(ui->_nameMenu, lv_color_hex(0x1e1e1e), 0);
-    lv_obj_set_style_border_color(ui->_nameMenu, lv_color_hex(0x383838), 0);
+    lv_obj_set_style_bg_color(ui->_nameMenu, tc(TC_OVERLAY_BG), 0);
+    lv_obj_set_style_border_color(ui->_nameMenu, tc(TC_OVERLAY_BORDER), 0);
     lv_obj_set_style_border_width(ui->_nameMenu, 1, 0);
     lv_obj_set_style_radius(ui->_nameMenu, 8, 0);
     lv_obj_set_style_pad_all(ui->_nameMenu, 8, 0);
@@ -832,13 +829,13 @@ void LocoUI::group_btn_event_cb(lv_event_t * e) {
 
     lv_obj_t* title = lv_label_create(title_row);
     lv_label_set_text(title, "Select By Group");
-    lv_obj_set_style_text_color(title, lv_color_make(38, 166, 154), 0);
+    lv_obj_set_style_text_color(title, tc(TC_SECTION), 0);
     lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t* close_btn = lv_btn_create(title_row);
     lv_obj_set_size(close_btn, LV_SIZE_CONTENT, 28);
     lv_obj_set_style_pad_hor(close_btn, 10, 0);
-    lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x2e2e2e), 0);
+    lv_obj_set_style_bg_color(close_btn, tc(TC_SURFACE_RAISED), 0);
     lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     lv_obj_t* close_lbl = lv_label_create(close_btn);
     lv_label_set_text(close_lbl, "Back");
@@ -868,7 +865,7 @@ void LocoUI::group_btn_event_cb(lv_event_t * e) {
             lv_obj_t* btn = lv_btn_create(list);
             lv_obj_set_width(btn, LV_PCT(100));
             lv_obj_set_height(btn, 36);
-            lv_obj_set_style_bg_color(btn, lv_color_hex(0x2e2e2e), 0);
+            lv_obj_set_style_bg_color(btn, tc(TC_SURFACE_RAISED), 0);
             lv_obj_t* lbl = lv_label_create(btn);
             lv_label_set_text(lbl, group["name"] | "Unnamed Group");
             lv_obj_center(lbl);
@@ -925,7 +922,7 @@ void LocoUI::group_selected_event_cb(lv_event_t * e) {
             lv_obj_t* loco_btn = lv_btn_create(list);
             lv_obj_set_width(loco_btn, LV_PCT(100));
             lv_obj_set_height(loco_btn, 36);
-            lv_obj_set_style_bg_color(loco_btn, lv_color_hex(0x2e2e2e), 0);
+            lv_obj_set_style_bg_color(loco_btn, tc(TC_SURFACE_RAISED), 0);
             lv_obj_t* lbl = lv_label_create(loco_btn);
             lv_label_set_text(lbl, nameStr);
             lv_obj_center(lbl);
@@ -1047,8 +1044,8 @@ void LocoUI::dir_btn_event_cb(lv_event_t * e) {
     }
     bool fwd = lv_obj_has_state(ui->_dirBtn, LV_STATE_CHECKED);
     ui->_loco.direction = fwd;
-    if (ui->_dirFwdLabel) lv_obj_set_style_text_color(ui->_dirFwdLabel, fwd ? lv_color_hex(0xffffff) : lv_color_hex(0x555555), 0);
-    if (ui->_dirRevLabel) lv_obj_set_style_text_color(ui->_dirRevLabel, fwd ? lv_color_hex(0x555555) : lv_color_hex(0xffffff), 0);
+    if (ui->_dirFwdLabel) lv_obj_set_style_text_color(ui->_dirFwdLabel, fwd ? tc(TC_TEXT_PRIMARY) : tc(TC_TEXT_MUTED), 0);
+    if (ui->_dirRevLabel) lv_obj_set_style_text_color(ui->_dirRevLabel, fwd ? tc(TC_TEXT_MUTED) : tc(TC_TEXT_PRIMARY), 0);
     if (ui->_activeConsist) {
         ui->_dccex.setThrottle(ui->_activeConsist, 0, fwd ? Direction::Forward : Direction::Reverse);
     } else if (ui->_activeLoco) {
@@ -1144,8 +1141,8 @@ void LocoUI::demoStep(int step) {
     auto setDir = [this](bool fwd) {
         if (fwd) lv_obj_add_state(_dirBtn, LV_STATE_CHECKED);
         else     lv_obj_remove_state(_dirBtn, LV_STATE_CHECKED);
-        lv_obj_set_style_text_color(_dirFwdLabel, fwd ? lv_color_hex(0xffffff) : lv_color_hex(0x555555), 0);
-        lv_obj_set_style_text_color(_dirRevLabel, fwd ? lv_color_hex(0x555555) : lv_color_hex(0xffffff), 0);
+        lv_obj_set_style_text_color(_dirFwdLabel, fwd ? tc(TC_TEXT_PRIMARY) : tc(TC_TEXT_MUTED), 0);
+        lv_obj_set_style_text_color(_dirRevLabel, fwd ? tc(TC_TEXT_MUTED) : tc(TC_TEXT_PRIMARY), 0);
     };
 
     switch (step) {

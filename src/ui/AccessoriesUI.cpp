@@ -1,4 +1,5 @@
 #include "AccessoriesUI.h"
+#include "Theme.h"
 
 AccessoriesUI::AccessoriesUI(DCCEXProtocol& dccex, lv_obj_t* parent)
     : _dccex(dccex), _keyboard(nullptr), _lastState(-1), _lastAddr(0), _pendingQueryAddr(0), _recentCount(0) {
@@ -95,7 +96,7 @@ void AccessoriesUI::_buildContent() {
     _status_lbl = lv_label_create(_content);
     lv_label_set_text(_status_lbl, "--");
     lv_obj_set_style_text_font(_status_lbl, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(_status_lbl, lv_color_hex(0x888888), 0);
+    lv_obj_set_style_text_color(_status_lbl, tc(TC_TEXT_HINT), 0);
     lv_obj_set_width(_status_lbl, LV_PCT(100));
     lv_obj_set_style_text_align(_status_lbl, LV_TEXT_ALIGN_CENTER, 0);
 
@@ -144,7 +145,7 @@ void AccessoriesUI::rebuildRecents() {
         lv_obj_t* lbl = lv_label_create(_recents_cont);
         lv_label_set_text(lbl, "No recent addresses");
         lv_obj_set_style_text_font(lbl, &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(lbl, lv_color_hex(0x555555), 0);
+        lv_obj_set_style_text_color(lbl, tc(TC_TEXT_MUTED), 0);
         return;
     }
     for (int i = 0; i < _recentCount; i++) {
@@ -152,7 +153,7 @@ void AccessoriesUI::rebuildRecents() {
         lv_obj_set_size(chip, LV_SIZE_CONTENT, 28);
         lv_obj_set_style_pad_hor(chip, 10, 0);
         lv_obj_set_style_pad_ver(chip, 0, 0);
-        lv_obj_set_style_bg_color(chip, lv_color_hex(0x2e2e2e), 0);
+        lv_obj_set_style_bg_color(chip, tc(TC_SURFACE_RAISED), 0);
         lv_obj_set_style_bg_color(chip, lv_palette_main(LV_PALETTE_BLUE), LV_STATE_PRESSED);
         lv_obj_t* lbl = lv_label_create(chip);
         lv_label_set_text_fmt(lbl, "%d", _recents[i]);
@@ -175,9 +176,9 @@ void AccessoriesUI::updateButtonStyles() {
     bool closed = (_lastState == 0);
 
     lv_obj_set_style_bg_color(_btn_throw,
-        thrown ? lv_color_make(180, 120, 30) : lv_color_hex(0x2e2e2e), 0);
+        thrown ? lv_color_make(180, 120, 30) : tc(TC_SURFACE_RAISED), 0);
     lv_obj_set_style_bg_color(_btn_close,
-        closed ? lv_color_make(40, 140, 40) : lv_color_hex(0x2e2e2e), 0);
+        closed ? lv_color_make(40, 140, 40) : tc(TC_SURFACE_RAISED), 0);
 }
 
 void AccessoriesUI::queryStatus(uint16_t addr) {
