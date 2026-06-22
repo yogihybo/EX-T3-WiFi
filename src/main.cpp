@@ -28,34 +28,28 @@
 #include "ProgramUI.h"
 #include <memory>
 
-#define MOSI_PIN 32
-#define MISO_PIN 39
-#define CLK_PIN  25
-#define CS_PIN   33
-#define IRQ_PIN  36
+// Touch and encoder pins are defined per-board in platformio.ini build_flags:
+//   TOUCH_MOSI, TOUCH_MISO, TOUCH_CLK, TOUCH_CS, TOUCH_IRQ
+//   ENCODER_CLK_PIN, ENCODER_DT_PIN, ENCODER_BTN_PIN
 
-#define ENCODER_CLK_PIN 22  // GPIO22 – rotary CLK (A); TEMPORARY for testing
-#define ENCODER_DT_PIN  27  // GPIO27 – rotary DT  (B); HW-040 supplies pull-up
-#define ENCODER_BTN_PIN 35  // GPIO35 – encoder push button; TEMPORARY for testing (input-only, no internal pull-up)
-
-XPT2046_Bitbang touchscreen(MOSI_PIN, MISO_PIN, CLK_PIN, CS_PIN, IRQ_PIN);
+XPT2046_Bitbang touchscreen(TOUCH_MOSI, TOUCH_MISO, TOUCH_CLK, TOUCH_CS, TOUCH_IRQ);
 
 static void touch_read(lv_indev_t * indev, lv_indev_data_t * data) {
   if (touchscreen.isTouched()) {
     Point p = touchscreen.getTouch();
 
-    int x = map(p.x, Settings.TouchCal.xMin, Settings.TouchCal.xMax, 239, 0);
-    x = constrain(x, 0, 239);
+    int x = map(p.x, Settings.TouchCal.xMin, Settings.TouchCal.xMax, TFT_WIDTH - 1, 0);
+    x = constrain(x, 0, TFT_WIDTH - 1);
 
-    int y = map(p.y, Settings.TouchCal.yMin, Settings.TouchCal.yMax, 0, 319);
-    y = constrain(y, 0, 319);
+    int y = map(p.y, Settings.TouchCal.yMin, Settings.TouchCal.yMax, 0, TFT_HEIGHT - 1);
+    y = constrain(y, 0, TFT_HEIGHT - 1);
 
     lv_disp_t * display = lv_disp_get_default();
     lv_display_rotation_t rotation = lv_display_get_rotation(display);
 
     if (rotation == LV_DISPLAY_ROTATION_90 || rotation == LV_DISPLAY_ROTATION_270) {
-      x = 240 - x;
-      y = 320 - y;
+      x = TFT_WIDTH - x;
+      y = TFT_HEIGHT - y;
     }
 
     data->point.x = x;
@@ -245,6 +239,22 @@ void setup() {
   LVGL_CYD::begin(USB_DOWN);
   LVGL_CYD::backlight(0);
   Serial.printf("[Boot] After LVGL_CYD: %u bytes free\n", ESP.getFreeHeap());
+
+#ifdef BOARD_HAS_PSRAM
+  {
+    // Replace the partial draw buffer with a full-screen framebuffer in PSRAM.
+    // Frees LVGL from partial-strip rendering and keeps ~300 KB off the internal heap.
+    const size_t psramBufSize = TFT_WIDTH * TFT_HEIGHT * (LV_COLOR_DEPTH / 8);
+    void* psramBuf = ps_malloc(psramBufSize);
+    if (psramBuf) {
+      lv_display_set_buffers(lv_display_get_default(), psramBuf, nullptr,
+                             psramBufSize, LV_DISPLAY_RENDER_MODE_FULL);
+      Serial.printf("[Boot] LVGL framebuffer in PSRAM: %u bytes\n", psramBufSize);
+    } else {
+      Serial.println("[Boot] PSRAM framebuffer alloc failed, using library default");
+    }
+  }
+#endif
 
   touchscreen.begin();
 

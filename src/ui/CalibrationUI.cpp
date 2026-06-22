@@ -108,40 +108,40 @@ void CalibrationUI::processTouch() {
             int ui_x2 = lv_obj_get_width(_container) - 30;
             int ui_y2 = lv_obj_get_height(_container) - 30;
 
-            // 3. Map UI coordinates to Physical touch coordinates (0-239, 0-319)
-            // LVGL 9 rotates touch input internally. We reverse that rotation to find 
+            // 3. Map UI coordinates to physical touch coordinates (0..TFT_WIDTH-1, 0..TFT_HEIGHT-1)
+            // LVGL 9 rotates touch input internally. We reverse that rotation to find
             // the expected physical mapping for the buttons.
             int x_map1, y_map1, x_map2, y_map2;
-            
+
             if (rotation == LV_DISPLAY_ROTATION_0) {
                 x_map1 = ui_x1; y_map1 = ui_y1;
                 x_map2 = ui_x2; y_map2 = ui_y2;
             } else if (rotation == LV_DISPLAY_ROTATION_90) {
-                x_map1 = 240 - ui_y1; y_map1 = ui_x1;
-                x_map2 = 240 - ui_y2; y_map2 = ui_x2;
+                x_map1 = TFT_WIDTH - ui_y1; y_map1 = ui_x1;
+                x_map2 = TFT_WIDTH - ui_y2; y_map2 = ui_x2;
             } else if (rotation == LV_DISPLAY_ROTATION_180) {
-                x_map1 = 240 - ui_x1; y_map1 = 320 - ui_y1;
-                x_map2 = 240 - ui_x2; y_map2 = 320 - ui_y2;
+                x_map1 = TFT_WIDTH - ui_x1; y_map1 = TFT_HEIGHT - ui_y1;
+                x_map2 = TFT_WIDTH - ui_x2; y_map2 = TFT_HEIGHT - ui_y2;
             } else { // LV_DISPLAY_ROTATION_270
-                x_map1 = ui_y1; y_map1 = 320 - ui_x1;
-                x_map2 = ui_y2; y_map2 = 320 - ui_x2;
+                x_map1 = ui_y1; y_map1 = TFT_HEIGHT - ui_x1;
+                x_map2 = ui_y2; y_map2 = TFT_HEIGHT - ui_x2;
             }
 
             // 4. Calculate xMin/xMax
-            // main.cpp maps p.x to 239..0 using: map(p.x, xMin, xMax, 239, 0)
-            // This means xMin corresponds to 239, and xMax corresponds to 0.
+            // main.cpp maps p.x to (TFT_WIDTH-1)..0 using: map(p.x, xMin, xMax, TFT_WIDTH-1, 0)
+            // This means xMin corresponds to TFT_WIDTH-1, and xMax corresponds to 0.
             float mx = (float)(_rx2 - _rx1) / (x_map2 - x_map1);
             float cx = _rx1 - mx * x_map1;
-            int xMin = round(mx * 239 + cx);
+            int xMin = round(mx * (TFT_WIDTH - 1) + cx);
             int xMax = round(mx * 0 + cx);
 
             // 5. Calculate yMin/yMax
-            // main.cpp maps p.y to 0..319 using: map(p.y, yMin, yMax, 0, 319)
-            // This means yMin corresponds to 0, and yMax corresponds to 319.
+            // main.cpp maps p.y to 0..(TFT_HEIGHT-1) using: map(p.y, yMin, yMax, 0, TFT_HEIGHT-1)
+            // This means yMin corresponds to 0, and yMax corresponds to TFT_HEIGHT-1.
             float my = (float)(_ry2 - _ry1) / (y_map2 - y_map1);
             float cy = _ry1 - my * y_map1;
             int yMin = round(my * 0 + cy);
-            int yMax = round(my * 319 + cy);
+            int yMax = round(my * (TFT_HEIGHT - 1) + cy);
 
             // Safety Check: Validate the calculated bounds before saving.
             // A typical 12-bit ADC ranges from 0 to 4095. 
