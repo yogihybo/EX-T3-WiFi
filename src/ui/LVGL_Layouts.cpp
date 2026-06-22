@@ -3,6 +3,7 @@
 
 LV_FONT_DECLARE(fa_gauge_high_16);
 LV_FONT_DECLARE(fa_icons_18);
+LV_FONT_DECLARE(loco_icon_15);
 
 SemaphoreHandle_t lvgl_mutex = NULL;
 
@@ -137,6 +138,7 @@ static void create_header_bar() {
     lv_obj_t* loco_group = lv_obj_create(header_bar);
     lv_obj_set_size(loco_group, LV_SIZE_CONTENT, LV_PCT(100));
     lv_obj_set_style_pad_all(loco_group, 0, 0);
+    lv_obj_set_style_pad_left(loco_group, 10, 0);
     lv_obj_set_style_border_width(loco_group, 0, 0);
     lv_obj_set_style_bg_opa(loco_group, 0, 0);
     lv_obj_set_flex_flow(loco_group, LV_FLEX_FLOW_COLUMN);
@@ -145,21 +147,14 @@ static void create_header_bar() {
     lv_obj_clear_flag(loco_group, LV_OBJ_FLAG_SCROLLABLE);
 
     train_img = lv_label_create(loco_group);
-    lv_label_set_text(train_img, "\xEF\x88\xB8");  // U+F238 fa-train
-    lv_obj_set_style_text_font(train_img, &fa_icons_18, 0);
+    lv_label_set_text(train_img, "\xEE\xA4\x80");  // U+E900 custom loco icon
+    lv_obj_set_style_text_font(train_img, &loco_icon_15, 0);
     lv_obj_set_style_text_color(train_img, tc(TC_ICON_INACTIVE), 0);
-    lv_obj_set_style_pad_left(train_img, 10, 0);
-    lv_obj_set_style_pad_top(train_img, -4, 0);           // compress flex layout height
-    lv_obj_set_style_pad_bottom(train_img, -4, 0);
-    lv_obj_set_style_transform_scale(train_img, 177, 0);  // 69% of original
-    lv_obj_set_style_transform_pivot_x(train_img, 0, 0);
-    lv_obj_set_style_transform_pivot_y(train_img, 9, 0);
 
     loco_label = lv_label_create(loco_group);
     lv_label_set_text(loco_label, "000");
     lv_obj_set_style_text_font(loco_label, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(loco_label, tc(TC_TEXT_HINT), 0);
-    lv_obj_set_style_translate_y(loco_label, 3, 0);
 
     // CS signal bars + "DCC" label stacked in a column
     lv_obj_t* cs_group = lv_obj_create(header_bar);
