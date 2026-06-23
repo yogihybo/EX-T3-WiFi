@@ -186,7 +186,24 @@ void AccessoriesUI::updateButtonStyles() {
 
 void AccessoriesUI::queryStatus(uint16_t addr) {
     _pendingQueryAddr = addr;
-    _dccex.sendCommand("T");
+    _dccex.refreshTurnoutList();
+}
+
+void AccessoriesUI::receivedTurnoutList() {
+    if (_pendingQueryAddr == 0) return;
+    Turnout* t = _dccex.getTurnoutById(_pendingQueryAddr);
+    if (!t) {
+        if (_status_lbl) {
+            lv_label_set_text_fmt(_status_lbl, "ID %d not defined", _pendingQueryAddr);
+            lv_obj_set_style_text_color(_status_lbl, tc(TC_TEXT_HINT), 0);
+        }
+        return;
+    }
+    bool thrown = t->getThrown();
+    _lastState = thrown ? 1 : 0;
+    _lastAddr  = _pendingQueryAddr;
+    updateButtonStyles();
+    updateStatus(thrown, _pendingQueryAddr);
 }
 
 void AccessoriesUI::textarea_event_cb(lv_event_t* e) {

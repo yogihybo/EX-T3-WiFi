@@ -38,8 +38,10 @@ class LocoUI : public UIView {
 
     lv_obj_t* _prevBtn;
     lv_obj_t* _nextBtn;
-    lv_obj_t* _speedArc;
+    lv_obj_t* _speedArc;         // transparent touch overlay
+    lv_obj_t* _speedScale;      // lv_scale gauge face (transparent, labels overflow outside)
     lv_obj_t* _speedLabel;
+    lv_coord_t _gaugeFaceRadius = 0;
     lv_obj_t* _dirBtn;      // lv_switch
     lv_obj_t* _dirFwdLabel;
     lv_obj_t* _dirRevLabel;
@@ -82,6 +84,7 @@ class LocoUI : public UIView {
 
     static void nav_btn_event_cb(lv_event_t * e);
     static void dir_btn_event_cb(lv_event_t * e);
+    static void gauge_needle_draw_cb(lv_event_t * e);
     static void speed_arc_event_cb(lv_event_t * e);
     static void fn_btn_event_cb(lv_event_t * e);
     static void page_btn_event_cb(lv_event_t * e);

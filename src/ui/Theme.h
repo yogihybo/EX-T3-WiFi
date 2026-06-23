@@ -38,6 +38,17 @@ enum ThemeColor {
     // Danger / destructive actions
     TC_DANGER,           // red background for destructive buttons
 
+    // Speed gauge (lv_scale dial)
+    TC_GAUGE_BG,          // matches container background (face + hub blend into screen)
+    TC_GAUGE_FACE,       // gauge background fill
+    TC_GAUGE_BORDER,     // gauge outer border
+    TC_GAUGE_RING,       // scale arc ring
+    TC_GAUGE_TICK_MAJOR, // major tick lines
+    TC_GAUGE_TICK_MINOR, // minor tick lines
+    TC_GAUGE_LABEL,      // tick label text
+    TC_GAUGE_NEEDLE,     // needle line
+    TC_GAUGE_HUB,        // centre masking circle
+
     TC_COUNT
 };
 

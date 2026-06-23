@@ -90,6 +90,16 @@ static void light_override_cb(lv_theme_t* th, lv_obj_t* obj) {
     // Force dark text on all widget types so nothing renders white-on-white
     lv_obj_set_style_text_color(obj, lv_color_hex(0x111111), 0);
 
+    // Buttons: neutralise all states so the LVGL secondary colour (red tint)
+    // never bleeds through. Local explicit styles override these theme-level ones.
+    if (lv_obj_check_type(obj, &lv_button_class)) {
+        lv_obj_set_style_bg_color(obj, lv_color_hex(0xeeeeee), LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(obj, lv_color_hex(0xdddddd), LV_STATE_PRESSED);
+        lv_obj_set_style_bg_color(obj, lv_color_hex(0xe0e0e0), LV_STATE_FOCUSED);
+        lv_obj_set_style_bg_color(obj, lv_color_hex(0xe0e0e0), LV_STATE_FOCUS_KEY);
+        return;
+    }
+
     if (!lv_obj_check_type(obj, &lv_obj_class)) return;
     if (lv_obj_get_parent(obj) == NULL) {
         lv_obj_set_style_bg_color(obj, lv_color_hex(0xf0f0f0), 0);
@@ -104,7 +114,7 @@ void apply_theme() {
     lv_disp_t* disp = lv_disp_get_default();
     lv_theme_t* base = lv_theme_default_init(disp,
         lv_color_make(50, 150, 255),
-        lv_color_make(255, 50, 50),
+        lv_color_make(100, 100, 100),
         is_dark,
         &lv_font_montserrat_14);
 
@@ -142,7 +152,7 @@ static void create_header_bar() {
     lv_obj_set_style_border_width(loco_group, 0, 0);
     lv_obj_set_style_bg_opa(loco_group, 0, 0);
     lv_obj_set_flex_flow(loco_group, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(loco_group, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(loco_group, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(loco_group, 0, 0);
     lv_obj_clear_flag(loco_group, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -163,7 +173,7 @@ static void create_header_bar() {
     lv_obj_set_style_border_width(cs_group, 0, 0);
     lv_obj_set_style_bg_opa(cs_group, 0, 0);
     lv_obj_set_flex_flow(cs_group, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(cs_group, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(cs_group, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(cs_group, 0, 0);
     lv_obj_clear_flag(cs_group, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -187,7 +197,7 @@ static void create_header_bar() {
     lv_obj_set_style_border_width(wifi_group, 0, 0);
     lv_obj_set_style_bg_opa(wifi_group, 0, 0);
     lv_obj_set_flex_flow(wifi_group, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(wifi_group, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(wifi_group, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(wifi_group, 0, 0);
     lv_obj_clear_flag(wifi_group, LV_OBJ_FLAG_SCROLLABLE);
 

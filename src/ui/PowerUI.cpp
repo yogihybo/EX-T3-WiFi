@@ -132,34 +132,49 @@ PowerUI::~PowerUI() {
 }
 
 void PowerUI::updateStyles() {
-    static const lv_color_t WHITE = lv_color_hex(0xffffff);
-    static const lv_color_t GREEN_BG  = lv_color_make(40,  140, 40);
-    static const lv_color_t RED_BG    = lv_color_make(140, 40,  40);
-    static const lv_color_t GREEN_FG  = lv_color_make(76,  175, 80);
-    static const lv_color_t RED_FG    = lv_color_make(180, 50,  50);
+    static const lv_color_t WHITE    = lv_color_hex(0xffffff);
+    static const lv_color_t GREEN_BG = lv_color_make(40,  140, 40);
+    static const lv_color_t RED_BG   = lv_color_make(140, 40,  40);
+    static const lv_color_t GREEN_FG = lv_color_make(76,  175, 80);
+    static const lv_color_t RED_FG   = lv_color_make(180, 50,  50);
 
-    auto set_btn = [&](lv_obj_t* btn, bool active, lv_color_t active_bg) {
-        lv_obj_set_style_bg_color(btn, active ? active_bg : tc(TC_SURFACE_RAISED), 0);
+    auto set_btn = [&](lv_obj_t* btn, bool active, bool known, lv_color_t active_bg) {
+        bool highlight = known && active;
+        lv_obj_set_style_bg_color(btn, highlight ? active_bg : tc(TC_SURFACE_RAISED), 0);
         lv_obj_t* lbl = lv_obj_get_child(btn, 0);
-        if (lbl) lv_obj_set_style_text_color(lbl, active ? WHITE : tc(TC_TEXT_PRIMARY), 0);
+        if (lbl) lv_obj_set_style_text_color(lbl, highlight ? WHITE : tc(TC_TEXT_PRIMARY), 0);
     };
 
-    set_btn(_btn_main_on,  _mainOn,  GREEN_BG);
-    set_btn(_btn_main_off, !_mainOn, RED_BG);
+    lv_color_t grey = tc(TC_TEXT_HINT);
 
-    lv_obj_set_style_bg_color(_dot_main, _mainOn ? GREEN_FG : RED_FG, 0);
-    lv_label_set_text(_lbl_main_status, _mainOn ? "ON" : "OFF");
-    lv_obj_set_style_text_color(_lbl_main_status, _mainOn ? GREEN_FG : RED_FG, 0);
+    // Main track
+    set_btn(_btn_main_on,  _mainOn,  _mainKnown, GREEN_BG);
+    set_btn(_btn_main_off, !_mainOn, _mainKnown, RED_BG);
+    if (_mainKnown) {
+        lv_obj_set_style_bg_color(_dot_main, _mainOn ? GREEN_FG : RED_FG, 0);
+        lv_label_set_text(_lbl_main_status, _mainOn ? "ON" : "OFF");
+        lv_obj_set_style_text_color(_lbl_main_status, _mainOn ? GREEN_FG : RED_FG, 0);
+    } else {
+        lv_obj_set_style_bg_color(_dot_main, grey, 0);
+        lv_label_set_text(_lbl_main_status, "UNKNOWN");
+        lv_obj_set_style_text_color(_lbl_main_status, grey, 0);
+    }
 
-    set_btn(_btn_prog_on,  _progOn,  GREEN_BG);
-    set_btn(_btn_prog_off, !_progOn, RED_BG);
+    // Prog track
+    set_btn(_btn_prog_on,  _progOn,  _progKnown, GREEN_BG);
+    set_btn(_btn_prog_off, !_progOn, _progKnown, RED_BG);
+    if (_progKnown) {
+        lv_obj_set_style_bg_color(_dot_prog, _progOn ? GREEN_FG : RED_FG, 0);
+        lv_label_set_text(_lbl_prog_status, _progOn ? "ON" : "OFF");
+        lv_obj_set_style_text_color(_lbl_prog_status, _progOn ? GREEN_FG : RED_FG, 0);
+    } else {
+        lv_obj_set_style_bg_color(_dot_prog, grey, 0);
+        lv_label_set_text(_lbl_prog_status, "UNKNOWN");
+        lv_obj_set_style_text_color(_lbl_prog_status, grey, 0);
+    }
 
-    lv_obj_set_style_bg_color(_dot_prog, _progOn ? GREEN_FG : RED_FG, 0);
-    lv_label_set_text(_lbl_prog_status, _progOn ? "ON" : "OFF");
-    lv_obj_set_style_text_color(_lbl_prog_status, _progOn ? GREEN_FG : RED_FG, 0);
-
-    set_btn(_btn_all_on,  (_mainOn && _progOn),   GREEN_BG);
-    set_btn(_btn_all_off, (!_mainOn && !_progOn),  RED_BG);
+    set_btn(_btn_all_on,  (_mainOn && _progOn),  (_mainKnown && _progKnown), GREEN_BG);
+    set_btn(_btn_all_off, (!_mainOn && !_progOn), (_mainKnown && _progKnown), RED_BG);
 
     lv_obj_set_style_bg_color(_btn_join,
         _joinOn ? lv_color_make(180, 120, 30) : tc(TC_SURFACE_DEEP), 0);
@@ -173,9 +188,11 @@ void PowerUI::updateStyles() {
 
 void PowerUI::onPowerUpdate(bool main, bool prog, bool join) {
     _updatingFromBroadcast = true;
-    _mainOn = main;
-    _progOn = prog;
-    _joinOn = join;
+    _mainOn    = main;
+    _progOn    = prog;
+    _joinOn    = join;
+    _mainKnown = true;
+    _progKnown = true;
 
     Serial.printf("[DCC] Track power – Main: %s  Prog: %s  Join: %s\n",
         main ? "ON" : "OFF", prog ? "ON" : "OFF", join ? "ON" : "OFF");
@@ -189,9 +206,11 @@ void PowerUI::onIndividualPowerUpdate(TrackPower state, int track) {
     _updatingFromBroadcast = true;
 
     if (track == 2698315) {
-        _mainOn = on;
+        _mainOn    = on;
+        _mainKnown = true;
     } else if (track == 2788330) {
-        _progOn = on;
+        _progOn    = on;
+        _progKnown = true;
     }
 
     updateStyles();
@@ -213,12 +232,12 @@ void PowerUI::btn_event_cb(lv_event_t* e) {
     int action = (int)(uintptr_t)lv_obj_get_user_data((lv_obj_t*)lv_event_get_current_target(e));
 
     switch (action) {
-        case 1: ui->_dccex.powerMainOn();  ui->_mainOn = true;                         break;
-        case 2: ui->_dccex.powerMainOff(); ui->_mainOn = false;                        break;
-        case 3: ui->_dccex.powerProgOn();  ui->_progOn = true;                         break;
-        case 4: ui->_dccex.powerProgOff(); ui->_progOn = false;                        break;
-        case 5: ui->_dccex.powerOn();      ui->_mainOn = true;  ui->_progOn = true;    break;
-        case 6: ui->_dccex.powerOff();     ui->_mainOn = false; ui->_progOn = false;   break;
+        case 1: ui->_dccex.powerMainOn();  ui->_mainOn = true;  ui->_mainKnown = true;                                               break;
+        case 2: ui->_dccex.powerMainOff(); ui->_mainOn = false; ui->_mainKnown = true;                                               break;
+        case 3: ui->_dccex.powerProgOn();  ui->_progOn = true;  ui->_progKnown = true;                                               break;
+        case 4: ui->_dccex.powerProgOff(); ui->_progOn = false; ui->_progKnown = true;                                               break;
+        case 5: ui->_dccex.powerOn();      ui->_mainOn = true;  ui->_progOn = true;  ui->_mainKnown = true; ui->_progKnown = true;   break;
+        case 6: ui->_dccex.powerOff();     ui->_mainOn = false; ui->_progOn = false; ui->_mainKnown = true; ui->_progKnown = true;   break;
         case 7:
             if (ui->_joinOn) {
                 ui->_dccex.powerOff();

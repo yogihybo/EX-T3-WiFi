@@ -161,6 +161,10 @@ public:
   void receivedTurnoutAction(int turnoutId, bool thrown) override {
     if (accUI) accUI->receivedTurnoutAction(turnoutId, thrown);
   }
+
+  void receivedTurnoutList() override {
+    if (accUI) accUI->receivedTurnoutList();
+  }
 };
 
 AppDelegate appDelegate;

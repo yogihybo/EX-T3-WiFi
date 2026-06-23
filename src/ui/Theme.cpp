@@ -22,6 +22,15 @@ static const uint32_t DARK[TC_COUNT] = {
     /* TC_OVERLAY_BORDER */ 0x383838,
     /* TC_OVERLAY_TEXT   */ 0xaaaaaa,
     /* TC_DANGER         */ 0xc83232,
+    /* TC_GAUGE_BG       */ 0x1a1a1a,
+    /* TC_GAUGE_FACE     */ 0x0b0b0f,
+    /* TC_GAUGE_BORDER   */ 0x3a3a4a,
+    /* TC_GAUGE_RING     */ 0x555566,
+    /* TC_GAUGE_TICK_MAJ */ 0xffffff,
+    /* TC_GAUGE_TICK_MIN */ 0x888899,
+    /* TC_GAUGE_LABEL    */ 0xffffff,
+    /* TC_GAUGE_NEEDLE   */ 0xffffff,
+    /* TC_GAUGE_HUB      */ 0x0b0b0f,
 };
 
 static const uint32_t LIGHT[TC_COUNT] = {
@@ -45,6 +54,15 @@ static const uint32_t LIGHT[TC_COUNT] = {
     /* TC_OVERLAY_BORDER */ 0xdddddd,
     /* TC_OVERLAY_TEXT   */ 0x555555,
     /* TC_DANGER         */ 0xc83232,
+    /* TC_GAUGE_BG       */ 0xf5f5f5,
+    /* TC_GAUGE_FACE     */ 0xf0f0f8,
+    /* TC_GAUGE_BORDER   */ 0x9999bb,
+    /* TC_GAUGE_RING     */ 0x777788,
+    /* TC_GAUGE_TICK_MAJ */ 0x222244,
+    /* TC_GAUGE_TICK_MIN */ 0x888899,
+    /* TC_GAUGE_LABEL    */ 0x333355,
+    /* TC_GAUGE_NEEDLE   */ 0x111133,
+    /* TC_GAUGE_HUB      */ 0xf0f0f8,
 };
 
 lv_color_t tc(ThemeColor color) {

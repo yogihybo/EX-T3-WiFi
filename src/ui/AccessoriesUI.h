@@ -43,4 +43,5 @@ class AccessoriesUI : public UIView {
     ~AccessoriesUI() override;
 
     void receivedTurnoutAction(int id, bool thrown);
+    void receivedTurnoutList();
 };
